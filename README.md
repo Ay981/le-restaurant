@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# My Restaurant POS Dashboard
+
+A modern restaurant POS-style dashboard built with Next.js, React, TypeScript, and Tailwind CSS.
+
+The UI is inspired by a food ordering/admin dashboard layout and includes:
+
+- a left navigation sidebar,
+- a menu browsing area,
+- a dish card grid,
+- and a right-side orders summary panel.
+
+## Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- React Icons
+
+## Features
+
+- Full-screen POS dashboard layout
+- Reusable homepage components
+- Centralized mock data in a dedicated data module
+- Responsive menu area with reusable dish cards
+- Orders panel with item list, quantity, note field, totals, and payment CTA
+
+## Project Structure
+
+Key files and folders:
+
+```text
+app/
+	component/
+		Card.tsx                  # Reusable dish card
+		homepage/
+			Header.tsx              # Top header with title, date, and search
+			MenuSection.tsx         # Left content area with categories and cards
+			OrdersPanel.tsx         # Right-side order summary panel
+			Sidenav.tsx             # Sidebar navigation
+	lib/
+		data.ts                   # Shared mock data + related TypeScript types
+	layout.tsx                  # Root layout
+	page.tsx                    # Main page composition
+	globals.css                 # Global styles
+```
+
+## Data Organization
+
+All page content is stored in [app/lib/data.ts](app/lib/data.ts), including:
+
+- `restaurantInfo`
+- `categories`
+- `dishes`
+- `orderTypes`
+- `orderItems`
+- `orderSummary`
+
+This keeps presentation components focused on UI and makes the project easier to scale.
+
+## Components Overview
+
+### `Sidenav`
+Renders the left navigation rail with the logo, menu icons, and logout button.
+
+### `Header`
+Renders the restaurant title, date, and search input.
+
+### `MenuSection`
+Renders the categories tabs, section heading, dining selector, and dish list.
+
+### `Card`
+Displays a single dish with image, title, price, and availability.
+
+### `OrdersPanel`
+Renders the active order view, order type buttons, order rows, totals, and checkout button.
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev     # Start development server
+npm run build   # Create production build
+npm run start   # Start production server
+npm run lint    # Run ESLint
+```
 
-## Learn More
+## Customization Guide
 
-To learn more about Next.js, take a look at the following resources:
+### Update restaurant information
+Edit `restaurantInfo` in [app/lib/data.ts](app/lib/data.ts).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Change menu categories
+Edit `categories` in [app/lib/data.ts](app/lib/data.ts).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Add or update dishes
+Edit the `dishes` array in [app/lib/data.ts](app/lib/data.ts).
 
-## Deploy on Vercel
+### Change order panel content
+Edit `orderTypes`, `orderItems`, and `orderSummary` in [app/lib/data.ts](app/lib/data.ts).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Update styling
+Main layout and UI styling lives in:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [app/page.tsx](app/page.tsx)
+- [app/component/Card.tsx](app/component/Card.tsx)
+- [app/component/homepage/Header.tsx](app/component/homepage/Header.tsx)
+- [app/component/homepage/MenuSection.tsx](app/component/homepage/MenuSection.tsx)
+- [app/component/homepage/OrdersPanel.tsx](app/component/homepage/OrdersPanel.tsx)
+- [app/component/homepage/Sidenav.tsx](app/component/homepage/Sidenav.tsx)
+
+## Notes
+
+- Images are served from the `public/` directory and should be referenced with root-relative paths like `/image/pizza.png`.
+- The current data is mock data intended for UI prototyping.
+- The current layout is componentized and ready for future state management or API integration.
+
+## Possible Next Improvements
+
+- add interactive category filtering,
+- connect the order panel to live state,
+- replace mock data with API data,
+- improve metadata in [app/layout.tsx](app/layout.tsx),
+- add tests for UI components.
