@@ -28,7 +28,6 @@ export default function Page() {
     <main className="min-h-screen w-full bg-[#252836] text-white">
       <div className="flex min-h-screen w-full flex-col bg-[#252836] md:flex-row">
         <Sidenav />
-
         <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
           <MenuSection
             restaurantName={restaurantInfo.name}
