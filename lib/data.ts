@@ -5,7 +5,7 @@ export type RestaurantInfo = {
 
 export type Dish = {
 	title: string;
-	price: string;
+	price: number;
 	availability: string;
 	image: string;
 };
@@ -13,8 +13,8 @@ export type Dish = {
 export type OrderItem = {
 	title: string;
 	shortTitle: string;
-	price: string;
-	total: string;
+	price: number;
+	total: number;
 	quantity: number;
 	note: string;
 	image: string;
@@ -22,13 +22,13 @@ export type OrderItem = {
 
 export type OrderSummary = {
 	orderNumber: string;
-	discount: string;
-	subtotal: string;
+	discount: number;
+	subtotal: number;
 };
 
 export const restaurantInfo: RestaurantInfo = {
 	name: "le restaurante",
-	searchPlaceholder: "Search for food, coffe, etc..",
+	searchPlaceholder: "Search for food, coffee, etc.",
 };
 
 export const categories = [
@@ -43,37 +43,37 @@ export const categories = [
 export const dishes: Dish[] = [
 	{
 		title: "Spicy seasoned seafood noodles",
-		price: "$ 2.29",
+		price: 2.29,
 		availability: "20 Bowls available",
 		image: "/image/pizza.png",
 	},
 	{
 		title: "Salted Pasta with mushroom sauce",
-		price: "$ 2.69",
+		price: 2.69,
 		availability: "11 Bowls available",
 		image: "/image/image.png",
 	},
 	{
 		title: "Beef dumpling in hot and sour soup",
-		price: "$ 2.99",
+		price: 2.99,
 		availability: "16 Bowls available",
 		image: "/image/pizza.png",
 	},
 	{
 		title: "Healthy noodle with spinach leaf",
-		price: "$ 3.29",
+		price: 3.29,
 		availability: "22 Bowls available",
 		image: "/image/image.png",
 	},
 	{
 		title: "Hot spicy fried rice with omelette",
-		price: "$ 3.49",
+		price: 3.49,
 		availability: "13 Bowls available",
 		image: "/image/image.png",
 	},
 	{
 		title: "Spicy instant noodle with special omelette",
-		price: "$ 3.59",
+		price: 3.59,
 		availability: "17 Bowls available",
 		image: "/image/pizza.png",
 	},
@@ -85,8 +85,8 @@ export const orderItems: OrderItem[] = [
 	{
 		title: "Spicy seasoned seafood noodles",
 		shortTitle: "Spicy seasoned sea...",
-		price: "$ 2.29",
-		total: "$ 4,58",
+		price: 2.29,
+		total: 4.58,
 		quantity: 2,
 		note: "Please, Just a little bit spicy only.",
 		image: "/image/pizza.png",
@@ -94,8 +94,8 @@ export const orderItems: OrderItem[] = [
 	{
 		title: "Salted Pasta with mushroom sauce",
 		shortTitle: "Salted pasta with mu...",
-		price: "$ 2.69",
-		total: "$ 2.69",
+		price: 2.69,
+		total: 2.69,
 		quantity: 1,
 		note: "Order Note...",
 		image: "/image/image.png",
@@ -103,8 +103,8 @@ export const orderItems: OrderItem[] = [
 	{
 		title: "Spicy instant noodle with special omelette",
 		shortTitle: "Spicy instant noodle...",
-		price: "$ 3.49",
-		total: "$ 10,47",
+		price: 3.49,
+		total: 10.47,
 		quantity: 3,
 		note: "Order Note...",
 		image: "/image/pizza.png",
@@ -112,8 +112,8 @@ export const orderItems: OrderItem[] = [
 	{
 		title: "Healthy noodle with spinach leaf",
 		shortTitle: "Healthy noodle with ...",
-		price: "$ 3.29",
-		total: "$ 3.29",
+		price: 3.29,
+		total: 3.29,
 		quantity: 1,
 		note: "",
 		image: "/image/image.png",
@@ -122,6 +122,6 @@ export const orderItems: OrderItem[] = [
 
 export const orderSummary: OrderSummary = {
 	orderNumber: "#34562",
-	discount: "$0",
-	subtotal: "$ 21,03",
+	discount: 0,
+	subtotal: 21.03,
 };

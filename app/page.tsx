@@ -1,6 +1,6 @@
-import MenuSection from "./component/homepage/MenuSection";
-import OrdersPanel from "./component/homepage/OrdersPanel";
-import Sidenav from "./component/homepage/Sidenav";
+import MenuSection from "@/components/homepage/MenuSection";
+import OrdersPanel from "@/components/homepage/OrdersPanel";
+import Sidenav from "@/components/navigation/Sidenav";
 import {
   categories,
   dishes,
@@ -8,7 +8,7 @@ import {
   orderSummary,
   orderTypes,
   restaurantInfo,
-} from "./lib/data";
+} from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +25,8 @@ export default function Page() {
   const currentDate = formatCurrentDate();
 
   return (
-    <main className="min-h-screen w-full bg-[#252836] text-white">
-      <div className="flex min-h-screen w-full flex-col bg-[#252836] md:flex-row">
+    <main className="app-bg-main min-h-screen w-full text-white">
+      <div className="app-bg-main flex min-h-screen w-full flex-col md:flex-row">
         <Sidenav />
         <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
           <MenuSection

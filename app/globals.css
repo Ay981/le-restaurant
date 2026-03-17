@@ -1,3 +1,48 @@
 @import "tailwindcss";
 
+:root {
+	--app-bg-main: #252836;
+	--app-bg-panel: #1f1d2b;
+	--app-bg-elevated: #2d303e;
+	--app-bg-logo: #312a42;
+	--app-accent: #ea7c69;
+	--app-ring-elevated: #2d303e;
+}
+
+.app-bg-main {
+	background-color: var(--app-bg-main);
+}
+
+.app-bg-panel {
+	background-color: var(--app-bg-panel);
+}
+
+.app-bg-elevated {
+	background-color: var(--app-bg-elevated);
+}
+
+.app-bg-logo {
+	background-color: var(--app-bg-logo);
+}
+
+.app-bg-accent {
+	background-color: var(--app-accent);
+}
+
+.app-text-accent {
+	color: var(--app-accent);
+}
+
+.app-border-accent {
+	border-color: var(--app-accent);
+}
+
+.app-hover-accent-soft:hover {
+	background-color: color-mix(in srgb, var(--app-accent) 12%, transparent);
+}
+
+.app-ring-elevated {
+	--tw-ring-color: var(--app-ring-elevated);
+}
+
 

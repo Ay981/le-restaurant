@@ -14,7 +14,7 @@ export default function Header({ name, date, searchPlaceholder }: HeaderProps) {
         <p className="mt-1 text-base text-gray-400 md:text-xl">{date}</p>
       </div>
 
-      <div className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#2d303e] px-4 py-3 text-gray-400 lg:max-w-75">
+      <div className="app-bg-elevated flex w-full items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-gray-400 lg:max-w-75">
         <FiSearch className="text-base" />
         <input
           type="text"
