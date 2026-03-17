@@ -18,14 +18,14 @@ export default function MenuSection({
   dishes,
 }: MenuSectionProps) {
   return (
-    <section className="flex-1 px-8 pb-8 pt-5">
+    <section className="flex-1 px-4 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5">
       <Header
         name={restaurantName}
         date={date}
         searchPlaceholder={searchPlaceholder}
       />
 
-      <div className="mt-5 flex flex-wrap gap-9 border-b border-white/10 pb-4 text-lg">
+      <div className="mt-4 flex gap-6 overflow-x-auto border-b border-white/10 pb-4 text-base whitespace-nowrap md:mt-5 md:gap-9 md:text-lg">
         {categories.map((category, index) => (
           <button
             key={category}
@@ -41,14 +41,14 @@ export default function MenuSection({
         ))}
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <h2 className="text-4xl font-semibold text-white">Choose Dishes</h2>
+      <div className="mt-5 flex items-center justify-between md:mt-6">
+        <h2 className="text-3xl font-semibold text-white md:text-4xl">Choose Dishes</h2>
         <button className="rounded-xl border border-white/10 bg-[#1f1d2b] px-4 py-2 text-base text-gray-200">
           ˅ &nbsp;Dine In
         </button>
       </div>
 
-      <div className="mt-16 flex flex-wrap items-start gap-x-8 gap-y-14">
+      <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-8 sm:justify-start md:gap-x-6 md:gap-y-10">
         {dishes.map((dish) => (
           <Card
             key={dish.title}

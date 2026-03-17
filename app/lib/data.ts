@@ -1,6 +1,5 @@
 export type RestaurantInfo = {
 	name: string;
-	date: string;
 	searchPlaceholder: string;
 };
 
@@ -28,8 +27,7 @@ export type OrderSummary = {
 };
 
 export const restaurantInfo: RestaurantInfo = {
-	name: "Jaegar Resto",
-	date: "Tuesday, 2 Feb 2021",
+	name: "le restaurante",
 	searchPlaceholder: "Search for food, coffe, etc..",
 };
 

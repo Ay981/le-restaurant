@@ -8,13 +8,13 @@ type HeaderProps = {
 
 export default function Header({ name, date, searchPlaceholder }: HeaderProps) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-5">
+    <div className="flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-white">{name}</h1>
-        <p className="mt-1 text-xl text-gray-400">{date}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">{name}</h1>
+        <p className="mt-1 text-base text-gray-400 md:text-xl">{date}</p>
       </div>
 
-      <div className="flex w-full max-w-75 items-center gap-2 rounded-xl border border-white/10 bg-[#2d303e] px-4 py-3 text-gray-400">
+      <div className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#2d303e] px-4 py-3 text-gray-400 lg:max-w-75">
         <FiSearch className="text-base" />
         <input
           type="text"

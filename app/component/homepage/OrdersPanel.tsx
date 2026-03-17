@@ -14,13 +14,13 @@ export default function OrdersPanel({
   orderSummary,
 }: OrdersPanelProps) {
   return (
-    <aside className="flex w-102.5 flex-col border-l border-white/8 bg-[#1f1d2b] px-6 py-6">
+    <aside className="flex w-full flex-col border-t border-white/8 bg-[#1f1d2b] px-4 py-5 md:px-6 md:py-6 xl:w-98.75 xl:border-l xl:border-t-0">
       <div className="border-b border-white/8 pb-5">
         <h2 className="text-2xl font-semibold text-white">
           Orders {orderSummary.orderNumber}
         </h2>
 
-        <div className="mt-5 flex gap-3">
+        <div className="mt-5 flex flex-wrap gap-3">
           {orderTypes.map((type, index) => (
             <button
               key={type}
@@ -38,7 +38,7 @@ export default function OrdersPanel({
 
       <div className="mt-6 flex items-center justify-between border-b border-white/8 pb-4 text-sm font-semibold text-gray-300">
         <span>Item</span>
-        <div className="flex items-center gap-11 pr-1">
+        <div className="flex items-center gap-7 pr-1 sm:gap-11">
           <span>Qty</span>
           <span>Price</span>
         </div>
