@@ -125,8 +125,8 @@ const { data, error } = await supabase.from("dishes").select("*");
 
 Initial schema is provided in:
 
-- [supabase/migrations/20260319_init_restaurant_schema.sql](supabase/migrations/20260319_init_restaurant_schema.sql)
-- [supabase/migrations/20260319_seed_dishes.sql](supabase/migrations/20260319_seed_dishes.sql)
+- [supabase/migrations/202603190100_baseline_restaurant_schema.sql](supabase/migrations/202603190100_baseline_restaurant_schema.sql)
+- [supabase/migrations/202603190200_payment_receipt_verifications.sql](supabase/migrations/202603190200_payment_receipt_verifications.sql)
 
 Apply it using either option:
 
@@ -154,8 +154,30 @@ This creates core tables:
 - `dishes`
 - `orders`
 - `order_items`
+- `payment_receipt_verifications`
 
-The seed migration inserts initial menu dishes from current mock data and is safe to re-run.
+The baseline migration creates schema + seeds initial menu dishes, and is safe to re-run.
+
+## Receipt Verification (verify.leul.et)
+
+For bank transfer payments, uploaded receipt screenshots are verified through server API route:
+
+- [app/api/payments/verify-receipt/route.ts](app/api/payments/verify-receipt/route.ts)
+
+Required server environment variables:
+
+```bash
+RECEIPT_VERIFY_URL=https://verifyapi.leulzenebe.pro/verify-image
+RECEIPT_VERIFY_API_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+Duplicate payment protection is enforced by unique constraints on:
+
+- `transaction_reference`
+- `receipt_hash`
+
+in table `payment_receipt_verifications`.
 
 ## Available Scripts
 

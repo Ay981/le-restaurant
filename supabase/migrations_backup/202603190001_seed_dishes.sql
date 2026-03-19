@@ -10,7 +10,6 @@ begin
     add constraint dishes_title_key unique (title);
   end if;
 end$$;
-
 insert into public.dishes (
   category_id,
   title,

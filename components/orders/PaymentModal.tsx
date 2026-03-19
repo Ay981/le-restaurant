@@ -20,6 +20,9 @@ export default function PaymentModal({
   onClose,
 }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankTransfer");
+  const [receiptVerified, setReceiptVerified] = useState(false);
+  const [receiptMessage, setReceiptMessage] = useState("Upload a receipt and verify it.");
+  const [receiptReference, setReceiptReference] = useState<string | null>(null);
 
   const paymentOptions: Array<{ id: PaymentMethod; label: string; disabled?: boolean }> = [
     { id: "bankTransfer", label: "Bank Transfer" },
@@ -56,8 +59,8 @@ export default function PaymentModal({
       }}
     >
       <div className="mx-auto flex min-h-full items-start justify-center py-2 md:items-center">
-        <div className="app-bg-panel grid w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/10 max-h-[calc(100dvh-2rem)] xl:grid-cols-[0.95fr_1.05fr] xl:overflow-hidden">
-        <section className="border-b border-white/10 p-5 xl:overflow-y-auto xl:border-b-0 xl:border-r xl:border-white/10 xl:p-6">
+        <div className="app-bg-panel grid h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-6xl min-h-0 overflow-hidden rounded-2xl border border-white/10 xl:grid-cols-[0.95fr_1.05fr]">
+        <section className="min-h-0 overflow-y-auto overscroll-y-contain border-b border-white/10 p-5 xl:border-b-0 xl:border-r xl:border-white/10 xl:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-3xl font-semibold text-white">Confirmation</h2>
@@ -114,7 +117,7 @@ export default function PaymentModal({
           </div>
         </section>
 
-        <section className="p-5 xl:overflow-y-auto xl:p-6">
+        <section className="min-h-0 overflow-y-auto overscroll-y-contain p-5 xl:p-6">
           <h2 className="text-3xl font-semibold text-white">Payment</h2>
           <p className="mt-1 text-sm text-gray-400">4 payment methods available</p>
 
@@ -133,6 +136,15 @@ export default function PaymentModal({
                     onClick={() => {
                       if (!option.disabled) {
                         setPaymentMethod(option.id);
+                        if (option.id !== "bankTransfer") {
+                          setReceiptVerified(true);
+                          setReceiptMessage("Verification is only required for bank transfer.");
+                          setReceiptReference(null);
+                        } else {
+                          setReceiptVerified(false);
+                          setReceiptMessage("Upload a receipt and verify it.");
+                          setReceiptReference(null);
+                        }
                       }
                     }}
                     className={[
@@ -165,7 +177,23 @@ export default function PaymentModal({
             </div>
           </div>
 
-          {paymentMethod === "bankTransfer" ? <TransactionUpload /> : null}
+          {paymentMethod === "bankTransfer" ? (
+            <>
+              <TransactionUpload
+                orderNumber={orderSummary.orderNumber}
+                expectedAmount={orderSummary.subtotal}
+                onVerificationChange={(verification) => {
+                  setReceiptVerified(verification.verified);
+                  setReceiptMessage(verification.message ?? "Verification state updated.");
+                  setReceiptReference(verification.transactionReference ?? null);
+                }}
+              />
+              <p className="mt-3 text-xs text-gray-400">
+                {receiptMessage}
+                {receiptReference ? ` (${receiptReference})` : ""}
+              </p>
+            </>
+          ) : null}
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
@@ -175,7 +203,11 @@ export default function PaymentModal({
             >
               Cancel
             </button>
-            <button type="button" className="app-bg-accent rounded-xl px-4 py-3 text-sm font-semibold text-white">
+            <button
+              type="button"
+              disabled={paymentMethod === "bankTransfer" && !receiptVerified}
+              className="app-bg-accent rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
               Confirm Payment
             </button>
           </div>
