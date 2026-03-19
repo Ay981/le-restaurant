@@ -117,6 +117,34 @@ function normalizeSecret(value: string): string {
   return value.trim().replace(/^['"]|['"]$/g, "");
 }
 
+function resolveVerificationApiKey() {
+  const candidates: Array<{ name: string; value: string | undefined }> = [
+    { name: "RECEIPT_VERIFY_API_KEY", value: process.env.RECEIPT_VERIFY_API_KEY },
+    { name: "VERIFY_API_KEY", value: process.env.VERIFY_API_KEY },
+    { name: "RECEIPT_API_KEY", value: process.env.RECEIPT_API_KEY },
+    { name: "NEXT_PUBLIC_RECEIPT_VERIFY_API_KEY", value: process.env.NEXT_PUBLIC_RECEIPT_VERIFY_API_KEY },
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate.value) {
+      continue;
+    }
+
+    const normalized = normalizeSecret(candidate.value);
+    if (normalized.length > 0) {
+      return {
+        key: normalized,
+        source: candidate.name,
+      };
+    }
+  }
+
+  return {
+    key: "",
+    source: null as string | null,
+  };
+}
+
 function withAutoVerify(endpoint: string): string {
   if (endpoint.includes("autoVerify=")) {
     return endpoint;
@@ -130,12 +158,7 @@ function uniqueValues(values: string[]): string[] {
 }
 
 export async function POST(request: Request) {
-  const verificationApiKey = normalizeSecret(
-    process.env.RECEIPT_VERIFY_API_KEY ??
-      process.env.VERIFY_API_KEY ??
-      process.env.RECEIPT_API_KEY ??
-      "",
-  );
+  const { key: verificationApiKey } = resolveVerificationApiKey();
   const configuredImageEndpoint = normalizeEndpoint(
     process.env.RECEIPT_VERIFY_URL ?? DEFAULT_IMAGE_VERIFICATION_ENDPOINT,
   );
@@ -144,11 +167,13 @@ export async function POST(request: Request) {
   );
 
   if (!verificationApiKey) {
+    const deploymentEnvironment = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "unknown";
+
     return NextResponse.json(
       {
         verified: false,
         message:
-          "Receipt verification API key is missing on the server. Set RECEIPT_VERIFY_API_KEY in the active deployment environment.",
+          `Receipt verification API key is missing on the server (env: ${deploymentEnvironment}). Set RECEIPT_VERIFY_API_KEY in the active deployment environment and redeploy.`,
         transactionReference: null,
       } satisfies VerifyResponse,
       { status: 500 },
