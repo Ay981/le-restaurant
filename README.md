@@ -16,6 +16,7 @@ The UI is inspired by a food ordering/admin dashboard layout and includes:
 - TypeScript
 - Tailwind CSS 4
 - React Icons
+- Supabase JavaScript SDK
 
 ## Features
 
@@ -31,23 +32,27 @@ Key files and folders:
 
 ```text
 app/
-	component/
-		Card.tsx                  # Reusable dish card
-		homepage/
-			Header.tsx              # Top header with title, date, and search
-			MenuSection.tsx         # Left content area with categories and cards
-			OrdersPanel.tsx         # Right-side order summary panel
-			Sidenav.tsx             # Sidebar navigation
-	lib/
-		data.ts                   # Shared mock data + related TypeScript types
 	layout.tsx                  # Root layout
 	page.tsx                    # Main page composition
 	globals.css                 # Global styles
+components/
+	Card.tsx                    # Reusable dish card
+	homepage/
+		Header.tsx                # Top header with title, date, and search
+		MenuSection.tsx           # Left content area with categories and cards
+		OrdersPanel.tsx           # Right-side order summary panel
+	navigation/
+		Sidenav.tsx               # Sidebar navigation
+lib/
+	data.ts                     # Shared mock data + related TypeScript types
+	supabase/
+		client.ts                 # Browser Supabase client helper
+		server.ts                 # Server Supabase client helper
 ```
 
 ## Data Organization
 
-All page content is stored in [app/lib/data.ts](app/lib/data.ts), including:
+All page content is stored in [lib/data.ts](lib/data.ts), including:
 
 - `restaurantInfo`
 - `categories`
@@ -91,6 +96,67 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Supabase Setup
+
+1. Create a Supabase project in your dashboard.
+2. Copy `.env.example` to `.env.local`.
+3. Fill in these values from Supabase project settings:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Client helpers are ready to use:
+
+- Browser/client components: `lib/supabase/client.ts`
+- Server components/actions/routes: `lib/supabase/server.ts`
+
+Example usage in a server component or route handler:
+
+```ts
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+const supabase = createServerSupabaseClient();
+const { data, error } = await supabase.from("dishes").select("*");
+```
+
+## Database Setup (Tables)
+
+Initial schema is provided in:
+
+- [supabase/migrations/20260319_init_restaurant_schema.sql](supabase/migrations/20260319_init_restaurant_schema.sql)
+- [supabase/migrations/20260319_seed_dishes.sql](supabase/migrations/20260319_seed_dishes.sql)
+
+Apply it using either option:
+
+1. Supabase Dashboard SQL Editor
+	- Open SQL Editor in your Supabase project.
+	- Paste and run the migration SQL file.
+
+2. Supabase CLI (if installed)
+
+```bash
+npx supabase login
+npx supabase link --project-ref <YOUR_PROJECT_REF>
+npx supabase db push
+```
+
+If `supabase` is not installed globally, always use `npx supabase ...`.
+
+Find `<YOUR_PROJECT_REF>` in Supabase Dashboard URL:
+
+`https://supabase.com/dashboard/project/<PROJECT_REF>/...`
+
+This creates core tables:
+
+- `categories`
+- `dishes`
+- `orders`
+- `order_items`
+
+The seed migration inserts initial menu dishes from current mock data and is safe to re-run.
+
 ## Available Scripts
 
 ```bash
@@ -103,26 +169,26 @@ npm run lint    # Run ESLint
 ## Customization Guide
 
 ### Update restaurant information
-Edit `restaurantInfo` in [app/lib/data.ts](app/lib/data.ts).
+Edit `restaurantInfo` in [lib/data.ts](lib/data.ts).
 
 ### Change menu categories
-Edit `categories` in [app/lib/data.ts](app/lib/data.ts).
+Edit `categories` in [lib/data.ts](lib/data.ts).
 
 ### Add or update dishes
-Edit the `dishes` array in [app/lib/data.ts](app/lib/data.ts).
+Edit the `dishes` array in [lib/data.ts](lib/data.ts).
 
 ### Change order panel content
-Edit `orderTypes`, `orderItems`, and `orderSummary` in [app/lib/data.ts](app/lib/data.ts).
+Edit `orderTypes`, `orderItems`, and `orderSummary` in [lib/data.ts](lib/data.ts).
 
 ### Update styling
 Main layout and UI styling lives in:
 
 - [app/page.tsx](app/page.tsx)
-- [app/component/Card.tsx](app/component/Card.tsx)
-- [app/component/homepage/Header.tsx](app/component/homepage/Header.tsx)
-- [app/component/homepage/MenuSection.tsx](app/component/homepage/MenuSection.tsx)
-- [app/component/homepage/OrdersPanel.tsx](app/component/homepage/OrdersPanel.tsx)
-- [app/component/homepage/Sidenav.tsx](app/component/homepage/Sidenav.tsx)
+- [components/Card.tsx](components/Card.tsx)
+- [components/homepage/Header.tsx](components/homepage/Header.tsx)
+- [components/homepage/MenuSection.tsx](components/homepage/MenuSection.tsx)
+- [components/homepage/OrdersPanel.tsx](components/homepage/OrdersPanel.tsx)
+- [components/navigation/Sidenav.tsx](components/navigation/Sidenav.tsx)
 
 ## Notes
 

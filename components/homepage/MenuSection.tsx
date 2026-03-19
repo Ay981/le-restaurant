@@ -1,14 +1,21 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Card from "@/components/Card";
-import type { Dish } from "@/lib/data";
+import type { Category, Dish } from "@/lib/data";
 import Header from "./Header";
 
 type MenuSectionProps = {
   restaurantName: string;
   date: string;
   searchPlaceholder: string;
-  categories: string[];
+  categories: readonly Category[];
   dishes: Dish[];
+  onAddDish: (dish: Dish) => void;
+  selectedOrderType: string;
 };
+
+type MenuFilter = Category | "All";
 
 /**
  * Renders the menu section of the homepage, displaying the restaurant name, date,
@@ -27,7 +34,21 @@ export default function MenuSection({
   searchPlaceholder,
   categories,
   dishes,
+  onAddDish,
+  selectedOrderType,
 }: MenuSectionProps) {
+  const [activeCategory, setActiveCategory] = useState<MenuFilter>("All");
+
+  const categoryOptions: readonly MenuFilter[] = ["All", ...categories];
+
+  const filteredDishes = useMemo(
+    () =>
+      activeCategory === "All"
+        ? dishes
+        : dishes.filter((dish) => dish.categories.includes(activeCategory)),
+    [dishes, activeCategory]
+  );
+
   
   return (
     <section className="flex-1 px-4 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5">
@@ -38,15 +59,19 @@ export default function MenuSection({
       />
 
       <div className="mt-4 flex gap-6 overflow-x-auto border-b border-white/10 pb-4 text-base whitespace-nowrap md:mt-5 md:gap-9 md:text-lg">
-        {categories.map((category, index) => (
+        {categoryOptions.map((category) => (
           <button
             key={category}
+            type="button"
+            onClick={() => setActiveCategory(category)}
             className={`relative pb-2 font-semibold transition-colors ${
-              index === 0 ? "app-text-accent" : "text-gray-300 hover:text-white"
+              activeCategory === category
+                ? "app-text-accent"
+                : "text-gray-300 hover:text-white"
             }`}
           >
             {category}
-            {index === 0 && (
+            {activeCategory === category && (
               <span className="app-bg-accent absolute inset-x-0 -bottom-4 h-1 rounded-full" />
             )}
           </button>
@@ -55,21 +80,28 @@ export default function MenuSection({
 
       <div className="mt-5 flex items-center justify-between md:mt-6">
         <h2 className="text-3xl font-semibold text-white md:text-4xl">Choose Dishes</h2>
-        <button className="app-bg-panel rounded-xl border border-white/10 px-4 py-2 text-base text-gray-200">
-          ˅ &nbsp;Dine In
+        <button
+          type="button"
+          className="app-bg-panel rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-200"
+        >
+          ˅ &nbsp;{selectedOrderType}
         </button>
       </div>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-8 sm:justify-start md:gap-x-6 md:gap-y-10">
-        {dishes.map((dish) => (
+      <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 lg:gap-x-3 lg:gap-y-8">
+        {filteredDishes.map((dish) => (
           <Card
             key={dish.title}
             title={dish.title}
             price={dish.price}
             availability={dish.availability}
             image={dish.image}
+            onClick={() => onAddDish(dish)}
           />
         ))}
+        {filteredDishes.length === 0 && (
+          <p className="text-base text-gray-400">No dishes found for this category.</p>
+        )}
       </div>
     </section>
   );

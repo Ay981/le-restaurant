@@ -1,5 +1,4 @@
-import MenuSection from "@/components/homepage/MenuSection";
-import OrdersPanel from "@/components/homepage/OrdersPanel";
+import HomeDashboard from "@/components/homepage/HomeDashboard";
 import Sidenav from "@/components/navigation/Sidenav";
 import {
   categories,
@@ -28,21 +27,15 @@ export default function Page() {
     <main className="app-bg-main min-h-screen w-full text-white">
       <div className="app-bg-main flex min-h-screen w-full flex-col md:flex-row">
         <Sidenav />
-        <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
-          <MenuSection
-            restaurantName={restaurantInfo.name}
-            date={currentDate}
-            searchPlaceholder={restaurantInfo.searchPlaceholder}
-            categories={categories}
-            dishes={dishes}
-          />
-
-          <OrdersPanel
-            orderTypes={orderTypes}
-            orderItems={orderItems}
-            orderSummary={orderSummary}
-          />
-        </div>
+        <HomeDashboard
+          date={currentDate}
+          restaurantInfo={restaurantInfo}
+          categories={categories}
+          dishes={dishes}
+          orderTypes={orderTypes}
+          initialOrderItems={orderItems}
+          initialOrderSummary={orderSummary}
+        />
       </div>
     </main>
   );
