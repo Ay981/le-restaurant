@@ -2,100 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadDishImage } from "@/lib/supabase/dish-image-upload";
-
-type UpdateDishBody = {
-  title?: string;
-  price?: number;
-  availabilityCount?: number;
-  imageUrl?: string;
-  categoryId?: number | null;
-  isActive?: boolean;
-  imageFile?: File | null;
-};
-
-function toNonNegativeNumber(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return null;
-  }
-
-  return value;
-}
-
-function toNonNegativeInteger(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    return null;
-  }
-
-  return value;
-}
-
-function toNonNegativeNumberFromUnknown(value: unknown): number | null {
-  if (typeof value === "number") {
-    return toNonNegativeNumber(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return toNonNegativeNumber(parsed);
-  }
-
-  return null;
-}
-
-function toNonNegativeIntegerFromUnknown(value: unknown): number | null {
-  if (typeof value === "number") {
-    return toNonNegativeInteger(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return toNonNegativeInteger(parsed);
-  }
-
-  return null;
-}
-
-function toBooleanFromUnknown(value: unknown): boolean | null {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true") {
-      return true;
-    }
-    if (normalized === "false") {
-      return false;
-    }
-  }
-
-  return null;
-}
-
-async function parseUpdateDishPayload(request: Request): Promise<UpdateDishBody> {
-  const contentType = request.headers.get("content-type") ?? "";
-
-  if (contentType.includes("multipart/form-data")) {
-    const formData = await request.formData();
-
-    const fileValue = formData.get("imageFile");
-    const imageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
-
-    return {
-      title: typeof formData.get("title") === "string" ? (formData.get("title") as string) : undefined,
-      price: toNonNegativeNumberFromUnknown(formData.get("price")) ?? undefined,
-      availabilityCount: toNonNegativeIntegerFromUnknown(formData.get("availabilityCount")) ?? undefined,
-      imageUrl:
-        typeof formData.get("imageUrl") === "string" ? (formData.get("imageUrl") as string) : undefined,
-      categoryId: toNonNegativeIntegerFromUnknown(formData.get("categoryId")),
-      isActive: toBooleanFromUnknown(formData.get("isActive")) ?? undefined,
-      imageFile,
-    };
-  }
-
-  return (await request.json()) as UpdateDishBody;
-}
+import { parseDishPayload, toNonNegativeInteger, toNonNegativeNumber } from "../_lib/parsing";
 
 export async function PATCH(
   request: Request,
@@ -119,7 +26,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Dish id is required." }, { status: 400 });
     }
 
-    const body = await parseUpdateDishPayload(request);
+    const body = await parseDishPayload(request, { includeIsActive: true });
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const price = toNonNegativeNumber(body.price);

@@ -1,84 +1,72 @@
 # My Restaurant POS Dashboard
 
-A modern restaurant POS-style dashboard built with Next.js, React, TypeScript, and Tailwind CSS.
+A restaurant POS-style dashboard built with Next.js, React, TypeScript, Tailwind, and Supabase.
+The app currently includes:
 
-The UI is inspired by a food ordering/admin dashboard layout and includes:
-
-- a left navigation sidebar,
-- a menu browsing area,
-- a dish card grid,
-- and a right-side orders summary panel.
+- guest ordering flow,
+- optional customer authentication with personalized insights,
+- admin-only category/dish management,
+- receipt verification for transfer payments,
+- Supabase Storage-backed dish image uploads.
 
 ## Stack
 
-- Next.js 16
+- Next.js 16 (App Router)
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- React Icons
 - Supabase JavaScript SDK
 
-## Features
+## Core Features
 
-- Full-screen POS dashboard layout
-- Reusable homepage components
-- Centralized mock data in a dedicated data module
-- Responsive menu area with reusable dish cards
-- Orders panel with item list, quantity, note field, totals, and payment CTA
+- POS dashboard layout with navigation, menu, and order panel
+- Supabase-backed categories, dishes, orders, and order items
+- Admin management UI with modal create/edit flows
+- Admin-only API routes for dish create/update
+- Receipt verification endpoint with replay protection
+- Customer personalization (previous orders + suggestions)
 
 ## Project Structure
 
-Key files and folders:
-
 ```text
 app/
-	layout.tsx                  # Root layout
-	page.tsx                    # Main page composition
-	globals.css                 # Global styles
+	admin/
+		_components/                    # Route-local admin UI components
+		page.tsx                        # Admin management page
+	api/
+		admin/
+			dishes/
+				_lib/                       # Shared parsing/types for admin dish APIs
+				route.ts                    # POST create dish
+				[id]/route.ts               # PATCH update dish
+		payments/
+			verify-receipt/
+				_lib/                       # Verification constants/helpers/types
+				route.ts                    # Receipt verification orchestration
+	orders/
+		_components/                    # Route-local order page panels
+		page.tsx
+	create-account/page.tsx
+	sign-in/page.tsx
+	page.tsx
+
 components/
-	Card.tsx                    # Reusable dish card
 	homepage/
-		Header.tsx                # Top header with title, date, and search
-		MenuSection.tsx           # Left content area with categories and cards
-		OrdersPanel.tsx           # Right-side order summary panel
 	navigation/
-		Sidenav.tsx               # Sidebar navigation
+	orders/
+
 lib/
-	data.ts                     # Shared mock data + related TypeScript types
+	currency.ts
+	data.ts                           # Shared UI data/fallback values
 	supabase/
-		client.ts                 # Browser Supabase client helper
-		server.ts                 # Server Supabase client helper
+		admin.ts                        # Service-role client
+		admin-route-auth.ts             # Admin auth verification for API routes
+		client.ts                       # Browser client
+		server.ts                       # Server client
+		dish-image-upload.ts            # Storage upload helper
+
+supabase/migrations/
 ```
-
-## Data Organization
-
-All page content is stored in [lib/data.ts](lib/data.ts), including:
-
-- `restaurantInfo`
-- `categories`
-- `dishes`
-- `orderTypes`
-- `orderItems`
-- `orderSummary`
-
-This keeps presentation components focused on UI and makes the project easier to scale.
-
-## Components Overview
-
-### `Sidenav`
-Renders the left navigation rail with the logo, menu icons, and logout button.
-
-### `Header`
-Renders the restaurant title, date, and search input.
-
-### `MenuSection`
-Renders the categories tabs, section heading, dining selector, and dish list.
-
-### `Card`
-Displays a single dish with image, title, price, and availability.
-
-### `OrdersPanel`
-Renders the active order view, order type buttons, order rows, totals, and checkout button.
 
 ## Getting Started
 
@@ -88,54 +76,32 @@ Install dependencies:
 npm install
 ```
 
-Start the development server:
+Start development server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000.
 
-## Supabase Setup
+## Environment Setup
 
-1. Create a Supabase project in your dashboard.
+1. Create a Supabase project.
 2. Copy `.env.example` to `.env.local`.
-3. Fill in these values from Supabase project settings:
+3. Fill required values:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+
+RECEIPT_VERIFY_URL=https://verifyapi.leulzenebe.pro/verify-image
+RECEIPT_VERIFY_API_KEY=...
 ```
 
-Client helpers are ready to use:
+## Database Setup (Supabase)
 
-- Browser/client components: `lib/supabase/client.ts`
-- Server components/actions/routes: `lib/supabase/server.ts`
-
-Example usage in a server component or route handler:
-
-```ts
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-const supabase = createServerSupabaseClient();
-const { data, error } = await supabase.from("dishes").select("*");
-```
-
-## Database Setup (Tables)
-
-Initial schema is provided in:
-
-- [supabase/migrations/202603190100_baseline_restaurant_schema.sql](supabase/migrations/202603190100_baseline_restaurant_schema.sql)
-- [supabase/migrations/202603190200_payment_receipt_verifications.sql](supabase/migrations/202603190200_payment_receipt_verifications.sql)
-- [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
-
-Apply it using either option:
-
-1. Supabase Dashboard SQL Editor
-	- Open SQL Editor in your Supabase project.
-	- Paste and run the migration SQL file.
-
-2. Supabase CLI (if installed)
+Apply migrations with CLI:
 
 ```bash
 npx supabase login
@@ -143,13 +109,14 @@ npx supabase link --project-ref <YOUR_PROJECT_REF>
 npx supabase db push
 ```
 
-If `supabase` is not installed globally, always use `npx supabase ...`.
+Current migration set:
 
-Find `<YOUR_PROJECT_REF>` in Supabase Dashboard URL:
+- [supabase/migrations/202603190100_baseline_restaurant_schema.sql](supabase/migrations/202603190100_baseline_restaurant_schema.sql)
+- [supabase/migrations/202603190200_payment_receipt_verifications.sql](supabase/migrations/202603190200_payment_receipt_verifications.sql)
+- [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
+- [supabase/migrations/202603190400_promote_admin_function.sql](supabase/migrations/202603190400_promote_admin_function.sql)
 
-`https://supabase.com/dashboard/project/<PROJECT_REF>/...`
-
-This creates core tables:
+Main tables:
 
 - `categories`
 - `dishes`
@@ -158,86 +125,51 @@ This creates core tables:
 - `payment_receipt_verifications`
 - `profiles`
 
-The baseline migration creates schema + seeds initial menu dishes, and is safe to re-run.
+## Authentication and Roles
 
-## Authentication Model
+- Guests can browse and place orders.
+- Signed-in users get personalized insights (previous orders and dish suggestions).
+- Orders are linked to `customer_user_id` when authenticated.
+- Admin write operations are protected by role checks and RLS policies.
 
-- Guests can browse dishes and place orders without signing in.
-- Signed-in customers get personalized data:
-	- previous orders
-	- dish suggestions based on prior order items
-- Orders created during checkout are linked to `customer_user_id` when the user is authenticated.
-- Admin-only management is enforced at the database policy layer for category/dish writes.
-- Admin UI is available at [app/admin/page.tsx](app/admin/page.tsx) for creating categories and managing dishes.
+Admin promotion function is available in the migration above (`public.promote_user_to_admin`).
 
-The auth and role policies are implemented in:
+## Admin Management APIs
 
-- [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
+- [app/api/admin/dishes/route.ts](app/api/admin/dishes/route.ts): create dish (admin only)
+- [app/api/admin/dishes/[id]/route.ts](app/api/admin/dishes/[id]/route.ts): update dish (admin only)
 
-## Receipt Verification (verify.leul.et)
+Both endpoints support JSON and multipart payloads. Multipart requests can include `imageFile`, which uploads to Supabase Storage via [lib/supabase/dish-image-upload.ts](lib/supabase/dish-image-upload.ts).
 
-For bank transfer payments, uploaded receipt screenshots are verified through server API route:
+## Receipt Verification
+
+Route:
 
 - [app/api/payments/verify-receipt/route.ts](app/api/payments/verify-receipt/route.ts)
 
-Required server environment variables:
+Route-local verification internals:
+
+- [app/api/payments/verify-receipt/_lib/constants.ts](app/api/payments/verify-receipt/_lib/constants.ts)
+- [app/api/payments/verify-receipt/_lib/helpers.ts](app/api/payments/verify-receipt/_lib/helpers.ts)
+- [app/api/payments/verify-receipt/_lib/types.ts](app/api/payments/verify-receipt/_lib/types.ts)
+
+Duplicate/replay protection is enforced through unique receipt and transaction-reference persistence in `payment_receipt_verifications`.
+
+## Images and Next.js Config
+
+- Local fallback images are in `public/image`.
+- Supabase Storage public URLs are supported through `images.remotePatterns` in [next.config.ts](next.config.ts).
+
+## Scripts
 
 ```bash
-RECEIPT_VERIFY_URL=https://verifyapi.leulzenebe.pro/verify-image
-RECEIPT_VERIFY_API_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+npm run dev
+npm run build
+npm run start
+npm run lint
 ```
 
-Duplicate payment protection is enforced by unique constraints on:
+## Current Notes
 
-- `transaction_reference`
-- `receipt_hash`
-
-in table `payment_receipt_verifications`.
-
-## Available Scripts
-
-```bash
-npm run dev     # Start development server
-npm run build   # Create production build
-npm run start   # Start production server
-npm run lint    # Run ESLint
-```
-
-## Customization Guide
-
-### Update restaurant information
-Edit `restaurantInfo` in [lib/data.ts](lib/data.ts).
-
-### Change menu categories
-Edit `categories` in [lib/data.ts](lib/data.ts).
-
-### Add or update dishes
-Edit the `dishes` array in [lib/data.ts](lib/data.ts).
-
-### Change order panel content
-Edit `orderTypes`, `orderItems`, and `orderSummary` in [lib/data.ts](lib/data.ts).
-
-### Update styling
-Main layout and UI styling lives in:
-
-- [app/page.tsx](app/page.tsx)
-- [components/Card.tsx](components/Card.tsx)
-- [components/homepage/Header.tsx](components/homepage/Header.tsx)
-- [components/homepage/MenuSection.tsx](components/homepage/MenuSection.tsx)
-- [components/homepage/OrdersPanel.tsx](components/homepage/OrdersPanel.tsx)
-- [components/navigation/Sidenav.tsx](components/navigation/Sidenav.tsx)
-
-## Notes
-
-- Images are served from the `public/` directory and should be referenced with root-relative paths like `/image/pizza.png`.
-- The current data is mock data intended for UI prototyping.
-- The current layout is componentized and ready for future state management or API integration.
-
-## Possible Next Improvements
-
-- add interactive category filtering,
-- connect the order panel to live state,
-- replace mock data with API data,
-- improve metadata in [app/layout.tsx](app/layout.tsx),
-- add tests for UI components.
+- Build is currently healthy after refactors.
+- If Next.js warns about workspace root/lockfiles, set `turbopack.root` in [next.config.ts](next.config.ts) or clean extra lockfiles outside this project.

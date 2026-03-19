@@ -66,7 +66,7 @@ export default function OrderItemRow({
 
       <div className="mt-3 flex items-center gap-3">
         <input
-          value={item.note}
+          type="text"
           onChange={(event) => onNoteChange(event.target.value)}
           placeholder="Order Note..."
           className="app-bg-elevated h-12 flex-1 rounded-lg border border-white/8 px-4 text-sm text-gray-300 outline-none"
