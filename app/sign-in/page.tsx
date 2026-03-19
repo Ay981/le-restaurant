@@ -17,7 +17,20 @@ export default function Page() {
       return "/";
     }
 
-    return new URLSearchParams(window.location.search).get("next") || "/";
+    const nextValue = new URLSearchParams(window.location.search).get("next");
+
+    if (!nextValue || typeof nextValue !== "string") {
+      return "/";
+    }
+
+    const sanitizedNext = nextValue.trim();
+    const isValidRelativePath =
+      sanitizedNext.startsWith("/") &&
+      !sanitizedNext.startsWith("//") &&
+      !sanitizedNext.includes("://") &&
+      !/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(sanitizedNext);
+
+    return isValidRelativePath ? sanitizedNext : "/";
   };
 
   useEffect(() => {
@@ -41,20 +54,24 @@ export default function Page() {
     setErrorMessage(null);
     setIsSubmitting(true);
 
-    const supabase = createBrowserSupabaseClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    setIsSubmitting(false);
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
 
-    if (error) {
-      setErrorMessage(error.message);
-      return;
+      router.replace(getNextPath());
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.replace(getNextPath());
   };
 
   return (

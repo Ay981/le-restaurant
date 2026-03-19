@@ -19,5 +19,5 @@ export const navItems: NavItem[] = [
   { icon: GrAnalytics, href: "/analytics" },
   { icon: MdOutlineMessage, href: "/messages" },
   { icon: IoIosNotificationsOutline, href: "/notifications" },
-  { icon: IoSettingsOutline, href: "/settings" },
+  { icon: IoSettingsOutline, href: "/admin" },
 ];

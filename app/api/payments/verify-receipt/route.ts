@@ -118,11 +118,11 @@ function normalizeSecret(value: string): string {
 }
 
 function resolveVerificationApiKey() {
+  // Only server-side env vars are allowed for secrets.
   const candidates: Array<{ name: string; value: string | undefined }> = [
     { name: "RECEIPT_VERIFY_API_KEY", value: process.env.RECEIPT_VERIFY_API_KEY },
     { name: "VERIFY_API_KEY", value: process.env.VERIFY_API_KEY },
     { name: "RECEIPT_API_KEY", value: process.env.RECEIPT_API_KEY },
-    { name: "NEXT_PUBLIC_RECEIPT_VERIFY_API_KEY", value: process.env.NEXT_PUBLIC_RECEIPT_VERIFY_API_KEY },
   ];
 
   for (const candidate of candidates) {

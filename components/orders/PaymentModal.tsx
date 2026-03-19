@@ -5,24 +5,48 @@ import Image from "next/image";
 import TransactionUpload from "@/components/orders/TransactionUpload";
 import { formatCurrency } from "@/lib/currency";
 import type { OrderItem, OrderSummary } from "@/lib/data";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type PaymentModalProps = {
   orderItems: OrderItem[];
   orderSummary: OrderSummary;
+  selectedOrderType: string;
   onClose: () => void;
 };
 
 type PaymentMethod = "bankTransfer" | "cash" | "teleBirr" | "mpesa";
 
+function mapOrderTypeToDb(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "delivery") {
+    return "delivery";
+  }
+
+  if (normalized === "to go" || normalized === "to_go" || normalized === "togo") {
+    return "to_go";
+  }
+
+  return "dine_in";
+}
+
+function buildOrderNumber() {
+  return `ORD-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+}
+
 export default function PaymentModal({
   orderItems,
   orderSummary,
+  selectedOrderType,
   onClose,
 }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankTransfer");
   const [receiptVerified, setReceiptVerified] = useState(false);
   const [receiptMessage, setReceiptMessage] = useState("Upload a receipt and verify it.");
   const [receiptReference, setReceiptReference] = useState<string | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
   const paymentOptions: Array<{ id: PaymentMethod; label: string; disabled?: boolean }> = [
     { id: "bankTransfer", label: "Bank Transfer" },
@@ -48,6 +72,73 @@ export default function PaymentModal({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
+
+  const handleConfirmPayment = async () => {
+    if (paymentMethod === "bankTransfer" && !receiptVerified) {
+      return;
+    }
+
+    setSubmitError(null);
+    setSubmitMessage(null);
+    setIsSavingOrder(true);
+
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const customerUserId = session?.user?.id ?? null;
+      const orderNumber = buildOrderNumber();
+
+      const { data: createdOrder, error: orderInsertError } = await supabase
+        .from("orders")
+        .insert({
+          order_number: orderNumber,
+          order_type: mapOrderTypeToDb(selectedOrderType),
+          status: "completed",
+          discount: orderSummary.discount,
+          subtotal: orderSummary.subtotal,
+          customer_user_id: customerUserId,
+        })
+        .select("id")
+        .single();
+
+      if (orderInsertError || !createdOrder?.id) {
+        throw new Error(orderInsertError?.message ?? "Could not create order record.");
+      }
+
+      const orderItemsPayload = orderItems.map((item) => ({
+        order_id: createdOrder.id,
+        dish_title_snapshot: item.title,
+        unit_price: item.price,
+        quantity: item.quantity,
+        note: item.note?.trim() || null,
+      }));
+
+      const { error: orderItemsInsertError } = await supabase
+        .from("order_items")
+        .insert(orderItemsPayload);
+
+      if (orderItemsInsertError) {
+        throw new Error(orderItemsInsertError.message);
+      }
+
+      setSubmitMessage(
+        customerUserId
+          ? "Payment confirmed. This order has been added to your history."
+          : "Payment confirmed. Sign in next time to unlock order history and personalized suggestions.",
+      );
+
+      setTimeout(() => {
+        onClose();
+      }, 700);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to confirm payment.");
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
 
   return (
     <div
@@ -168,7 +259,11 @@ export default function PaymentModal({
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm text-gray-300">
                 Order Type
-                <input className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100" defaultValue="Dine In" />
+                <input
+                  readOnly
+                  className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100"
+                  value={selectedOrderType}
+                />
               </label>
               <label className="text-sm text-gray-300">
                 Table no.
@@ -198,19 +293,26 @@ export default function PaymentModal({
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               type="button"
+              disabled={isSavingOrder}
               onClick={onClose}
-              className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-gray-200"
+              className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>
             <button
               type="button"
-              disabled={paymentMethod === "bankTransfer" && !receiptVerified}
+              onClick={() => {
+                void handleConfirmPayment();
+              }}
+              disabled={(paymentMethod === "bankTransfer" && !receiptVerified) || isSavingOrder}
               className="app-bg-accent rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Confirm Payment
+              {isSavingOrder ? "Confirming..." : "Confirm Payment"}
             </button>
           </div>
+
+          {submitError ? <p className="mt-3 text-xs text-red-300">{submitError}</p> : null}
+          {submitMessage ? <p className="mt-3 text-xs text-green-300">{submitMessage}</p> : null}
         </section>
         </div>
       </div>

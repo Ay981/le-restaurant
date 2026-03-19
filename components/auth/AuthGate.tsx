@@ -20,20 +20,45 @@ export default function AuthGate({ children }: AuthGateProps) {
 
     let mounted = true;
 
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) {
-        return;
+    const getCurrentPathForRedirect = () => {
+      if (typeof window !== "undefined") {
+        const fullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        return fullPath || pathname;
       }
 
-      setUser(session?.user ?? null);
-      setIsCheckingSession(false);
+      return pathname;
+    };
 
-      if (!session?.user) {
-        router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
+    const checkSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) {
+          return;
+        }
+
+        setUser(session?.user ?? null);
+
+        if (!session?.user) {
+          const encodedPath = encodeURIComponent(getCurrentPathForRedirect());
+          router.replace(`/sign-in?next=${encodedPath}`);
+        }
+      } catch (error) {
+        console.error("Failed to check Supabase session", error);
+
+        if (!mounted) {
+          return;
+        }
+
+        setUser(null);
+        const encodedPath = encodeURIComponent(pathname);
+        router.replace(`/sign-in?next=${encodedPath}`);
+      } finally {
+        if (mounted) {
+          setIsCheckingSession(false);
+        }
       }
     };
 
@@ -48,7 +73,8 @@ export default function AuthGate({ children }: AuthGateProps) {
 
       setUser(session?.user ?? null);
       if (!session?.user) {
-        router.replace("/sign-in");
+        const encodedPath = encodeURIComponent(getCurrentPathForRedirect());
+        router.replace(`/sign-in?next=${encodedPath}`);
       }
     });
 

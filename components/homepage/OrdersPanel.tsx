@@ -143,6 +143,7 @@ export default function OrdersPanel({
         <PaymentModal
           orderItems={orderItems}
           orderSummary={orderSummary}
+          selectedOrderType={selectedOrderType}
           onClose={() => setIsPaymentOpen(false)}
         />
       )}

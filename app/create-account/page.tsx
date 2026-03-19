@@ -33,30 +33,34 @@ export default function Page() {
 
     setIsSubmitting(true);
 
-    const supabase = createBrowserSupabaseClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+          },
         },
-      },
-    });
+      });
 
-    setIsSubmitting(false);
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
 
-    if (error) {
-      setErrorMessage(error.message);
-      return;
+      if (data.session) {
+        router.replace("/");
+        return;
+      }
+
+      setSuccessMessage("Account created. Please check your email to confirm your account before signing in.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to create account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (data.session) {
-      router.replace("/");
-      return;
-    }
-
-    setSuccessMessage("Account created. Please check your email to confirm your account before signing in.");
   };
 
   return (
@@ -128,8 +132,16 @@ export default function Page() {
               </label>
             </div>
 
-            {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
-            {successMessage ? <p className="text-sm text-green-300">{successMessage}</p> : null}
+            {errorMessage ? (
+              <p role="alert" aria-live="assertive" className="text-sm text-red-300">
+                {errorMessage}
+              </p>
+            ) : null}
+            {successMessage ? (
+              <p role="alert" aria-live="assertive" className="text-sm text-green-300">
+                {successMessage}
+              </p>
+            ) : null}
 
             <button
               type="submit"

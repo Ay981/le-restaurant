@@ -7,7 +7,7 @@ export const categories = [
 	"Dessert",
 ] as const;
 
-export type Category = (typeof categories)[number];
+export type Category = string;
 
 export type RestaurantInfo = {
 	name: string;

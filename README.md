@@ -127,6 +127,7 @@ Initial schema is provided in:
 
 - [supabase/migrations/202603190100_baseline_restaurant_schema.sql](supabase/migrations/202603190100_baseline_restaurant_schema.sql)
 - [supabase/migrations/202603190200_payment_receipt_verifications.sql](supabase/migrations/202603190200_payment_receipt_verifications.sql)
+- [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
 
 Apply it using either option:
 
@@ -155,8 +156,23 @@ This creates core tables:
 - `orders`
 - `order_items`
 - `payment_receipt_verifications`
+- `profiles`
 
 The baseline migration creates schema + seeds initial menu dishes, and is safe to re-run.
+
+## Authentication Model
+
+- Guests can browse dishes and place orders without signing in.
+- Signed-in customers get personalized data:
+	- previous orders
+	- dish suggestions based on prior order items
+- Orders created during checkout are linked to `customer_user_id` when the user is authenticated.
+- Admin-only management is enforced at the database policy layer for category/dish writes.
+- Admin UI is available at [app/admin/page.tsx](app/admin/page.tsx) for creating categories and managing dishes.
+
+The auth and role policies are implemented in:
+
+- [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
 
 ## Receipt Verification (verify.leul.et)
 
