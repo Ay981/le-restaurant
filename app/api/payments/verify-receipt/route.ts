@@ -113,6 +113,10 @@ function normalizeEndpoint(value: string): string {
   return withoutQuotes;
 }
 
+function normalizeSecret(value: string): string {
+  return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
 function withAutoVerify(endpoint: string): string {
   if (endpoint.includes("autoVerify=")) {
     return endpoint;
@@ -126,7 +130,12 @@ function uniqueValues(values: string[]): string[] {
 }
 
 export async function POST(request: Request) {
-  const verificationApiKey = process.env.RECEIPT_VERIFY_API_KEY;
+  const verificationApiKey = normalizeSecret(
+    process.env.RECEIPT_VERIFY_API_KEY ??
+      process.env.VERIFY_API_KEY ??
+      process.env.RECEIPT_API_KEY ??
+      "",
+  );
   const configuredImageEndpoint = normalizeEndpoint(
     process.env.RECEIPT_VERIFY_URL ?? DEFAULT_IMAGE_VERIFICATION_ENDPOINT,
   );
@@ -138,7 +147,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         verified: false,
-        message: "Receipt verification API key is missing on the server.",
+        message:
+          "Receipt verification API key is missing on the server. Set RECEIPT_VERIFY_API_KEY in the active deployment environment.",
         transactionReference: null,
       } satisfies VerifyResponse,
       { status: 500 },
@@ -276,6 +286,8 @@ export async function POST(request: Request) {
             method: "POST",
             headers: {
               "x-api-key": verificationApiKey,
+              "api-key": verificationApiKey,
+              Authorization: `Bearer ${verificationApiKey}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(universalPayload),
@@ -315,6 +327,8 @@ export async function POST(request: Request) {
               method: "POST",
               headers: {
                 "x-api-key": verificationApiKey,
+                "api-key": verificationApiKey,
+                Authorization: `Bearer ${verificationApiKey}`,
               },
               body: attemptPayload,
               cache: "no-store",
