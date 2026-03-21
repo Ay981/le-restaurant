@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import MenuSection from "@/components/homepage/MenuSection";
-import OrdersPanel from "@/components/homepage/OrdersPanel";
+import MenuSection from "@/app/_components/homepage/MenuSection";
+import OrdersPanel from "@/app/_components/homepage/OrdersPanel";
 import type { Category, Dish, OrderItem, OrderSummary, RestaurantInfo } from "@/lib/data";
 
 type HomeDashboardProps = {

@@ -1,4 +1,4 @@
-import HomeDashboard from "@/components/homepage/HomeDashboard";
+import HomeDashboard from "@/app/_components/homepage/HomeDashboard";
 import Sidenav from "@/components/navigation/Sidenav";
 import {
   categories,

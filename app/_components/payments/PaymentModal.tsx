@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import TransactionUpload from "@/components/payments/TransactionUpload";
+import TransactionUpload from "@/app/_components/payments/TransactionUpload";
 import { formatCurrency } from "@/lib/currency";
 import type { OrderItem, OrderSummary } from "@/lib/data";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";

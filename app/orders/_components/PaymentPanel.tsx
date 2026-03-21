@@ -1,6 +1,6 @@
 "use client";
 
-import TransactionUpload from "@/components/payments/TransactionUpload";
+import TransactionUpload from "@/app/_components/payments/TransactionUpload";
 import { usePaymentForm } from "../_hooks/usePaymentForm";
 
 export function PaymentPanel() {
