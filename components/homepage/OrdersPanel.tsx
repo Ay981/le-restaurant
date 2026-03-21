@@ -5,7 +5,7 @@ import type { OrderItem, OrderSummary } from "@/lib/data";
 import OrderItemRow from "@/components/homepage/orders/OrderItemRow";
 import OrderSummarySection from "@/components/homepage/orders/OrderSummary";
 import OrderTypeTabs from "@/components/homepage/orders/OrderTypeTabs";
-import PaymentModal from "@/components/orders/PaymentModal";
+import PaymentModal from "@/components/payments/PaymentModal";
 
 type OrdersPanelProps = {
   orderTypes: string[];

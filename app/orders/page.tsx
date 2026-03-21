@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ConfirmationPanel } from "./_components/ConfirmationPanel";
-import { PaymentPanel } from "./_components/PaymentPanel";
+import { ConfirmationPanel, PaymentPanel } from "./_components";
 
 export default function Page() {
   return (

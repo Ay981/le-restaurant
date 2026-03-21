@@ -14,6 +14,37 @@ export type EditableDish = {
   isActive: boolean;
 };
 
+export type AnalyticsOrderTypeCounts = {
+  dineIn: number;
+  toGo: number;
+  delivery: number;
+};
+
+export type AnalyticsMostOrderedItem = {
+  title: string;
+  count: number;
+  imageUrl: string;
+};
+
+export type AnalyticsRecentOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  createdAt: string;
+  firstItemTitle: string;
+};
+
+export type AdminAnalytics = {
+  totalRevenue: number;
+  totalOrders: number;
+  totalCustomers: number;
+  completionRate: number;
+  mostOrdered: AnalyticsMostOrderedItem[];
+  orderTypeCounts: AnalyticsOrderTypeCounts;
+  recentOrders: AnalyticsRecentOrder[];
+};
+
 export const settingsNavItems = [
   { label: "Appearance", description: "Dark and Light mode, Font size" },
   { label: "Your Restaurant", description: "Business profile and info" },

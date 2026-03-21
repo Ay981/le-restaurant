@@ -5,6 +5,7 @@ import Card from "@/components/Card";
 import type { Category, Dish } from "@/lib/data";
 import Header from "./Header";
 import AuthenticatedInsights from "./AuthenticatedInsights";
+import RecommendationChat from "./RecommendationChat";
 
 type MenuSectionProps = {
   restaurantName: string;
@@ -90,6 +91,8 @@ export default function MenuSection({
       </div>
 
       <AuthenticatedInsights />
+
+      <RecommendationChat dishes={dishes} onAddDish={onAddDish} />
 
       <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 lg:gap-x-3 lg:gap-y-8">
         {filteredDishes.map((dish) => (

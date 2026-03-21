@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { CategoryRecord, EditableDish } from "./types";
+import type { CategoryRecord, EditableDish } from "../types";
 
 type ProductsManagerPanelProps = {
   categories: CategoryRecord[];

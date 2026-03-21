@@ -1,4 +1,4 @@
-import { settingsNavItems } from "./types";
+import { settingsNavItems } from "../types";
 
 export default function AdminSettingsPanel() {
   return (

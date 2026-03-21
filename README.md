@@ -25,6 +25,7 @@ The app currently includes:
 - Admin-only API routes for dish create/update
 - Receipt verification endpoint with replay protection
 - Customer personalization (previous orders + suggestions)
+- Guided chatbot recommendations with Gemini fallback
 
 ## Project Structure
 
@@ -97,6 +98,9 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 RECEIPT_VERIFY_URL=https://verifyapi.leulzenebe.pro/verify-image
 RECEIPT_VERIFY_API_KEY=...
+
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 ## Database Setup (Supabase)
@@ -154,6 +158,23 @@ Route-local verification internals:
 - [app/api/payments/verify-receipt/_lib/types.ts](app/api/payments/verify-receipt/_lib/types.ts)
 
 Duplicate/replay protection is enforced through unique receipt and transaction-reference persistence in `payment_receipt_verifications`.
+
+## AI Recommendation Chatbot
+
+UI:
+
+- [components/homepage/RecommendationChat.tsx](components/homepage/RecommendationChat.tsx)
+
+API:
+
+- [app/api/chat/recommend/route.ts](app/api/chat/recommend/route.ts)
+
+Behavior:
+
+- asks guided preference questions (favorite recipe, cuisine, spice, budget, dietary, meal type),
+- returns up to 5 dish recommendations,
+- supports direct “Add to order” actions,
+- uses Gemini when configured, and falls back to rule-based ranking if Gemini is unavailable.
 
 ## Images and Next.js Config
 

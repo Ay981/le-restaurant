@@ -1,0 +1,86 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { AdminSideRail } from "./_components/layout";
+import AdminShellSkeleton from "./_components/skeletons/AdminShellSkeleton";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+type AdminLayoutProps = {
+  children: React.ReactNode;
+};
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const validateAccess = async () => {
+      const supabase = createBrowserSupabaseClient();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        router.replace(`/sign-in?next=${encodeURIComponent(pathname || "/admin")}`);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (profileError || profile?.role !== "admin") {
+        setIsAdmin(false);
+        setErrorMessage("Admin access is required for this section.");
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      setIsAdmin(true);
+      setErrorMessage(null);
+      setIsCheckingAccess(false);
+    };
+
+    void validateAccess();
+  }, [pathname, router]);
+
+  if (isCheckingAccess) {
+    return <AdminShellSkeleton />;
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="app-bg-main min-h-screen px-4 py-6 text-white md:px-8 md:py-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 p-6">
+          <h1 className="text-2xl font-semibold">Admin Access Required</h1>
+          <p className="mt-2 text-sm text-gray-300">Only admin accounts can access this section.</p>
+          {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}
+          <div className="mt-4">
+            <Link href="/" className="app-text-accent hover:underline">
+              Back to dashboard
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="app-bg-main min-h-screen px-2 py-2 text-white md:px-3">
+      <div className="w-full rounded-3xl border border-white/10 p-3 md:p-4">
+        <div className="grid items-stretch gap-3 lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[72px_1fr]">
+          <AdminSideRail />
+          <section>{children}</section>
+        </div>
+      </div>
+    </main>
+  );
+}
