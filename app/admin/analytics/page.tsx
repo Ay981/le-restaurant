@@ -2,15 +2,13 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Barlow } from "next/font/google";
-import { Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { FiSliders } from "react-icons/fi";
+import { Area, AreaChart, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { FiDownload } from "react-icons/fi";
 import AnalyticsSkeleton from "../_components/skeletons/AnalyticsSkeleton";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type TimeRange = "today" | "7d" | "30d";
-type OrderStatusFilter = "all" | "completed" | "preparing" | "pending";
 
 type OrderItemAnalyticsRow = {
   dish_title_snapshot: string;
@@ -28,36 +26,17 @@ type OrderAnalyticsRow = {
   order_items: OrderItemAnalyticsRow[] | null;
 };
 
-type DishLiteRow = {
-  title: string;
-  image_url: string | null;
-};
+type DishLiteRow = { title: string; image_url: string | null };
 
 type TrendStats = {
   percent: number;
   isPositive: boolean;
 };
 
-const barlow = Barlow({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
 const TIME_RANGE_OPTIONS: { key: TimeRange; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "7d", label: "7 Days" },
   { key: "30d", label: "30 Days" },
-];
-
-const CUSTOMER_NAME_POOL = [
-  "Eren Jaegar",
-  "Reiner Braun",
-  "Levi Ackerman",
-  "Historia Reiss",
-  "Hanji Zoe",
-  "Armin Arlert",
-  "Mikasa Ackerman",
-  "Jean Kirstein",
 ];
 
 function daysAgoIso(days: number) {
@@ -179,6 +158,11 @@ function filterOrdersByRange(orders: OrderAnalyticsRow[], range: TimeRange) {
   return orders.filter((order) => new Date(order.created_at).getTime() >= start);
 }
 
+function getPercent(value: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.round((value / total) * 100);
+}
+
 function getTrendStats(currentValue: number, previousValue: number): TrendStats {
   if (previousValue <= 0) {
     return { percent: currentValue > 0 ? 100 : 0, isPositive: currentValue >= previousValue };
@@ -188,52 +172,12 @@ function getTrendStats(currentValue: number, previousValue: number): TrendStats 
   return { percent: Math.round(delta * 10) / 10, isPositive: delta >= 0 };
 }
 
-function getCustomerName(customerId: string | null, index: number) {
-  if (!customerId) return `Guest ${index + 1}`;
-  const hash = customerId.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return CUSTOMER_NAME_POOL[hash % CUSTOMER_NAME_POOL.length];
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((segment) => segment[0])
-    .join("")
-    .toUpperCase();
-}
-
-function formatStatusLabel(status: string) {
-  return status
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function getStatusClass(status: string) {
-  if (status === "completed" || status === "served") return "bg-emerald-500/20 text-emerald-300";
-  if (status === "preparing") return "bg-indigo-500/20 text-indigo-300";
-  if (status === "pending") return "bg-amber-500/20 text-amber-300";
-  return "bg-white/10 text-gray-300";
-}
-
-function formatHeaderDate() {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
-}
-
 export default function AdminAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderAnalyticsRow[]>([]);
   const [dishes, setDishes] = useState<DishLiteRow[]>([]);
-  const [mostOrderedRange, setMostOrderedRange] = useState<TimeRange>("today");
-  const [orderTypeRange, setOrderTypeRange] = useState<TimeRange>("today");
-  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("all");
-  const [showAllMostOrdered, setShowAllMostOrdered] = useState(false);
+  const [range, setRange] = useState<TimeRange>("7d");
 
   const loadAnalyticsData = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
@@ -277,43 +221,37 @@ export default function AdminAnalyticsPage() {
   }, [loadAnalyticsData]);
 
   const analytics = useMemo(() => {
-    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-    const totalOrders = orders.length;
-    const totalCustomers = new Set(orders.map((order) => order.customer_user_id).filter(Boolean)).size;
-
-    const now = new Date();
-    const currentStart = new Date(now);
-    currentStart.setDate(currentStart.getDate() - 6);
-    currentStart.setHours(0, 0, 0, 0);
-
+    const filtered = filterOrdersByRange(orders, range);
+    const currentStart = getRangeStart(range);
+    const rangeDays = range === "today" ? 1 : range === "7d" ? 7 : 30;
     const previousStart = new Date(currentStart);
-    previousStart.setDate(previousStart.getDate() - 7);
+    previousStart.setDate(previousStart.getDate() - rangeDays);
 
-    const currentOrders = orders.filter((order) => new Date(order.created_at).getTime() >= currentStart.getTime());
-    const previousOrders = orders.filter((order) => {
+    const previousFiltered = orders.filter((order) => {
       const createdAt = new Date(order.created_at).getTime();
       return createdAt >= previousStart.getTime() && createdAt < currentStart.getTime();
     });
 
-    const currentRevenue = currentOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-    const previousRevenue = previousOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const totalRevenue = filtered.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const totalOrders = filtered.length;
+    const totalCustomers = new Set(filtered.map((order) => order.customer_user_id).filter(Boolean)).size;
+    const deliveredOrders = filtered.filter((order) => order.status === "completed" || order.status === "served").length;
+    const pendingOrders = filtered.filter((order) => order.status === "pending" || order.status === "preparing").length;
+    const deliveredRevenue = filtered
+      .filter((order) => order.status === "completed" || order.status === "served")
+      .reduce((sum, order) => sum + Number(order.total || 0), 0);
 
-    const currentCustomers = new Set(currentOrders.map((order) => order.customer_user_id).filter(Boolean)).size;
-    const previousCustomers = new Set(previousOrders.map((order) => order.customer_user_id).filter(Boolean)).size;
-
-    const trend = {
-      revenue: getTrendStats(currentRevenue, previousRevenue),
-      orders: getTrendStats(currentOrders.length, previousOrders.length),
-      customers: getTrendStats(currentCustomers, previousCustomers),
-    };
+    const previousRevenue = previousFiltered.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const previousOrders = previousFiltered.length;
+    const previousDeliveredRevenue = previousFiltered
+      .filter((order) => order.status === "completed" || order.status === "served")
+      .reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const previousAvgOrderValue = previousOrders > 0 ? previousRevenue / previousOrders : 0;
 
     const dishImageByTitle = new Map(dishes.map((dish) => [dish.title.toLowerCase(), dish.image_url || "/image/pizza.png"]));
 
-    const mostOrderedOrders = filterOrdersByRange(orders, mostOrderedRange);
-    const orderTypeOrders = filterOrdersByRange(orders, orderTypeRange);
-
     const dishOrderCount = new Map<string, number>();
-    for (const order of mostOrderedOrders) {
+    for (const order of filtered) {
       for (const item of order.order_items ?? []) {
         const key = item.dish_title_snapshot;
         dishOrderCount.set(key, (dishOrderCount.get(key) ?? 0) + Number(item.quantity || 0));
@@ -328,271 +266,306 @@ export default function AdminAnalyticsPage() {
         imageUrl: dishImageByTitle.get(title.toLowerCase()) ?? "/image/pizza.png",
       }));
 
-    const typeCounts = orderTypeOrders.reduce(
-      (accumulator, order) => {
-        if (order.order_type === "delivery") accumulator.delivery += 1;
-        else if (order.order_type === "to_go") accumulator.toGo += 1;
-        else accumulator.dineIn += 1;
-        return accumulator;
-      },
-      { dineIn: 0, toGo: 0, delivery: 0 },
-    );
-
-    const orderTypeData = [
-      { name: "Dine In", value: typeCounts.dineIn, color: "#fb7185" },
-      { name: "To Go", value: typeCounts.toGo, color: "#fdba74" },
-      { name: "Delivery", value: typeCounts.delivery, color: "#60a5fa" },
-    ];
-
-    const maxOrderTypeCount = Math.max(...orderTypeData.map((item) => item.value), 1);
-    const orderTypeRings = orderTypeData.map((item, index) => ({
-      ...item,
-      innerRadius: 32 + index * 16,
-      outerRadius: 40 + index * 16,
-      data: [
-        { name: item.name, value: item.value, fill: item.color },
-        { name: "rest", value: Math.max(maxOrderTypeCount - item.value, 0), fill: "rgba(255,255,255,0.08)" },
-      ],
-    }));
-
-    const reportRows = orders.slice(0, 9).map((order, index) => {
-      const customerName = getCustomerName(order.customer_user_id, index);
+    const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const ordersByWeekday = weekdayNames.map((name, index) => {
+      const dayOrders = filtered.filter((order) => new Date(order.created_at).getDay() === index);
+      const dayRevenue = dayOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
       return {
-        id: order.id,
-        customerName,
-        initials: getInitials(customerName),
-        menu: order.order_items?.[0]?.dish_title_snapshot || "Order item",
-        amount: Number(order.total || 0),
-        status: order.status,
+        name,
+        orders: dayOrders.length,
+        revenue: Math.round(dayRevenue),
       };
     });
 
-    const filteredReportRows =
-      statusFilter === "all" ? reportRows : reportRows.filter((row) => row.status === statusFilter || (statusFilter === "completed" && row.status === "served"));
+    const mixedSeries = weekdayNames.map((name, index) => {
+      const dayOrders = filtered.filter((order) => new Date(order.created_at).getDay() === index);
+      const delivered = dayOrders.filter((order) => order.status === "completed" || order.status === "served").length;
+      const pending = dayOrders.filter((order) => order.status === "pending" || order.status === "preparing").length;
+      return { name, delivered, pending };
+    });
+
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const soldMeals = mostOrdered.reduce((sum, item) => sum + item.count, 0);
+    const completionRate = getPercent(deliveredOrders, totalOrders);
+    const customerGrowth = Math.min(100, totalCustomers * 8);
+    const revenueIndex = Math.min(100, Math.round((totalRevenue / 5000) * 100));
+
+    const foodRows = mostOrdered.slice(0, 6).map((item) => ({
+      ...item,
+      popularity: getPercent(item.count, soldMeals),
+    }));
+
+    const trends = {
+      revenue: getTrendStats(totalRevenue, previousRevenue),
+      orders: getTrendStats(totalOrders, previousOrders),
+      deliveredRevenue: getTrendStats(deliveredRevenue, previousDeliveredRevenue),
+      avgOrderValue: getTrendStats(avgOrderValue, previousAvgOrderValue),
+    };
 
     return {
+      filtered,
       totalRevenue,
       totalOrders,
       totalCustomers,
-      trend,
-      mostOrdered,
-      orderTypeData,
-      orderTypeRings,
-      reportRows: filteredReportRows,
+      deliveredOrders,
+      pendingOrders,
+      avgOrderValue,
+      completionRate,
+      customerGrowth,
+      revenueIndex,
+      soldMeals,
+      deliveredRevenue,
+      mostOrdered: foodRows,
+      ordersByWeekday,
+      mixedSeries,
+      trends,
     };
-  }, [dishes, mostOrderedRange, orderTypeRange, orders, statusFilter]);
+  }, [dishes, orders, range]);
 
-  const mostOrderedRows = showAllMostOrdered ? analytics.mostOrdered : analytics.mostOrdered.slice(0, 3);
+  const downloadReport = () => {
+    const header = ["Order Number", "Order Type", "Status", "Total", "Created At"];
+    const rows = analytics.filtered.map((order) => [
+      order.order_number,
+      order.order_type,
+      order.status,
+      String(Number(order.total || 0)),
+      order.created_at,
+    ]);
+
+    const csv = [header, ...rows].map((line) => line.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sales-report-${range}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) {
     return <AnalyticsSkeleton />;
   }
 
   return (
-    <div className={`grid items-stretch gap-4 lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[1fr_320px] ${barlow.className}`}>
-      <section className="space-y-4 lg:h-full">
-            <header>
-              <h1 className="text-4xl font-semibold leading-none tracking-tight">Dashboard</h1>
-              <p className="mt-2 text-lg text-gray-400">{formatHeaderDate()}</p>
-            </header>
+    <section className="space-y-4 text-sm">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Restaurant Sales Reports</h1>
+          <p className="mt-1 text-sm text-gray-300">Analytics dashboard for orders, revenue, and customer activity.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={range}
+            onChange={(event) => setRange(event.target.value as TimeRange)}
+            className="app-bg-elevated rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100"
+            aria-label="Analytics time range"
+          >
+            {TIME_RANGE_OPTIONS.map((option) => (
+              <option key={option.key} value={option.key} className="bg-slate-900 text-white">
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={downloadReport}
+            className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100"
+          >
+            <FiDownload />
+            Save Report
+          </button>
+        </div>
+      </header>
 
-            <div className="grid gap-3 border-t border-white/10 pt-4 md:grid-cols-3">
-              <article className="app-bg-panel rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-indigo-500/15 p-1.5 text-indigo-300">$</span>
-                  <span className={`text-xs font-semibold ${analytics.trend.revenue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
-                    {analytics.trend.revenue.isPositive ? "+" : "-"}
-                    {Math.abs(analytics.trend.revenue.percent).toFixed(1)}%
-                  </span>
-                </div>
-                <p className="mt-3 text-[2.2rem] leading-none font-semibold">{formatCurrency(analytics.totalRevenue)}</p>
-                <p className="mt-2 text-base text-gray-400">Total Revenue</p>
-              </article>
-
-              <article className="app-bg-panel rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-rose-500/15 p-1.5 text-rose-300">#</span>
-                  <span className={`text-xs font-semibold ${analytics.trend.orders.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
-                    {analytics.trend.orders.isPositive ? "+" : "-"}
-                    {Math.abs(analytics.trend.orders.percent).toFixed(1)}%
-                  </span>
-                </div>
-                <p className="mt-3 text-[2.2rem] leading-none font-semibold">{analytics.totalOrders.toLocaleString()}</p>
-                <p className="mt-2 text-base text-gray-400">Total Dish Ordered</p>
-              </article>
-
-              <article className="app-bg-panel rounded-xl p-4">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-cyan-500/15 p-1.5 text-cyan-300">👥</span>
-                  <span className={`text-xs font-semibold ${analytics.trend.customers.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
-                    {analytics.trend.customers.isPositive ? "+" : "-"}
-                    {Math.abs(analytics.trend.customers.percent).toFixed(1)}%
-                  </span>
-                </div>
-                <p className="mt-3 text-[2.2rem] leading-none font-semibold">{analytics.totalCustomers.toLocaleString()}</p>
-                <p className="mt-2 text-base text-gray-400">Total Customer</p>
-              </article>
-            </div>
-
-            <article id="order-report" className="app-bg-panel rounded-2xl">
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                <h2 className="text-4xl font-semibold leading-none">Order Report</h2>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-base text-gray-200 hover:bg-white/5"
-                  onClick={() => {
-                    setStatusFilter((previous) => {
-                      if (previous === "all") return "completed";
-                      if (previous === "completed") return "preparing";
-                      if (previous === "preparing") return "pending";
-                      return "all";
-                    });
-                  }}
-                >
-                  <FiSliders />
-                  Filter Order {statusFilter !== "all" ? `(${formatStatusLabel(statusFilter)})` : "(All)"}
-                </button>
-              </div>
-
-              <div className="min-w-160 px-5 pb-4 pt-3">
-                <div className="grid grid-cols-[1fr_1fr_0.7fr_0.6fr] border-b border-white/10 pb-2 text-sm font-medium text-gray-300">
-                  <p>Customer</p>
-                  <p>Menu</p>
-                  <p>Total Payment</p>
-                  <p>Status</p>
-                </div>
-
-                <div className="divide-y divide-white/8">
-                  {analytics.reportRows.length === 0 ? (
-                    <p className="py-6 text-sm text-gray-400">No orders available for this filter.</p>
-                  ) : (
-                    analytics.reportRows.map((row) => (
-                      <div key={row.id} className="grid grid-cols-[1fr_1fr_0.7fr_0.6fr] items-center gap-3 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-gray-100">
-                            {row.initials}
-                          </span>
-                          <p className="text-base text-gray-200">{row.customerName}</p>
-                        </div>
-                        <p className="text-base text-gray-300">{row.menu}</p>
-                        <p className="text-base text-gray-200">{formatCurrency(row.amount)}</p>
-                        <span className={`inline-flex w-fit rounded-full px-3 py-1 text-sm ${getStatusClass(row.status)}`}>
-                          {formatStatusLabel(row.status)}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </article>
-          </section>
-
-          <section className="space-y-4 lg:h-full">
-            <article id="most-ordered" className="app-bg-panel rounded-2xl p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-4xl font-semibold leading-none">Most Ordered</h3>
-                <select
-                  value={mostOrderedRange}
-                  onChange={(event) => setMostOrderedRange(event.target.value as TimeRange)}
-                  className="rounded-xl border border-white/15 bg-transparent px-2.5 py-2 text-base text-gray-100"
-                  aria-label="Most ordered timeframe"
-                >
-                  {TIME_RANGE_OPTIONS.map((option) => (
-                    <option key={option.key} value={option.key} className="bg-slate-900 text-white">
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-4 border-t border-white/10 pt-4">
-                <div className="space-y-4">
-                  {mostOrderedRows.length === 0 ? (
-                    <p className="text-sm text-gray-400">No dish trends in this range.</p>
-                  ) : (
-                    mostOrderedRows.map((item) => (
-                      <div key={item.title} className="flex items-center gap-3">
-                        <Image src={item.imageUrl} alt={item.title} width={48} height={48} className="h-12 w-12 rounded-full object-cover" />
-                        <div className="min-w-0">
-                          <p className="truncate text-xl font-medium text-gray-100">{item.title}</p>
-                          <p className="text-base text-gray-400">{item.count} dishes ordered</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className="mt-5 w-full rounded-xl border border-rose-300/50 px-3 py-2.5 text-base font-medium text-rose-200 hover:bg-rose-300/10"
-                  onClick={() => setShowAllMostOrdered((previous) => !previous)}
-                >
-                  {showAllMostOrdered ? "Show Less" : "View All"}
-                </button>
-              </div>
-            </article>
-
-            <article id="order-type" className="app-bg-panel rounded-2xl p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-4xl font-semibold leading-none">Most Type of Order</h3>
-                <select
-                  value={orderTypeRange}
-                  onChange={(event) => setOrderTypeRange(event.target.value as TimeRange)}
-                  className="rounded-xl border border-white/15 bg-transparent px-2.5 py-2 text-base text-gray-100"
-                  aria-label="Order type timeframe"
-                >
-                  {TIME_RANGE_OPTIONS.map((option) => (
-                    <option key={option.key} value={option.key} className="bg-slate-900 text-white">
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-4 grid grid-cols-[1fr_auto] items-center border-t border-white/10 pt-4">
-                <div className="h-52">
+      <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+        <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
+          <h2 className="text-base font-semibold text-gray-100">Order Distribution</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Delivered Orders", value: analytics.completionRate, color: "#f87171" },
+              { label: "Customer Growth", value: analytics.customerGrowth, color: "#34d399" },
+              { label: "Total Revenue", value: analytics.revenueIndex, color: "#60a5fa" },
+            ].map((ring) => (
+              <div key={ring.label} className="rounded-xl border border-white/10 p-3 text-center">
+                <div className="mx-auto h-24 w-24">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {analytics.orderTypeRings.map((ring) => (
-                        <Pie
-                          key={ring.name}
-                          data={ring.data}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={ring.innerRadius}
-                          outerRadius={ring.outerRadius}
-                          startAngle={90}
-                          endAngle={-270}
-                          stroke="none"
-                          isAnimationActive={false}
-                        />
-                      ))}
+                      <Pie
+                        data={[
+                          { name: "value", value: ring.value, fill: ring.color },
+                          { name: "rest", value: Math.max(100 - ring.value, 0), fill: "rgba(255,255,255,0.08)" },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={26}
+                        outerRadius={38}
+                        startAngle={90}
+                        endAngle={-270}
+                        stroke="none"
+                        isAnimationActive={false}
+                      />
                       <Tooltip
-                        contentStyle={{ background: "#17192d", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 10 }}
-                        formatter={(value) => [`${Number(value ?? 0)} customers`, "Count"]}
+                        contentStyle={{
+                          background: "#17192d",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                        }}
+                        formatter={(value) => [`${value}%`, ring.label]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-
-                <div className="space-y-3">
-                  {analytics.orderTypeData.map((item) => (
-                    <div key={item.name} className="flex items-start gap-2 text-base text-gray-200">
-                      <span className="mt-1 h-4 w-4 rounded-full" style={{ backgroundColor: item.color }} />
-                      <div>
-                        <p className="text-xl font-medium">{item.name}</p>
-                        <p className="text-base text-gray-400">{item.value} customers</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="-mt-14 text-xs font-semibold text-white">{ring.value}%</p>
+                <p className="mt-8 text-xs text-gray-300">{ring.label}</p>
               </div>
-            </article>
-      </section>
+            ))}
+          </div>
+        </article>
 
-      {errorMessage ? <p className="text-sm text-red-300 lg:col-span-2">{errorMessage}</p> : null}
-    </div>
+        <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-gray-100">Orders Trend</h2>
+            <button
+              type="button"
+              onClick={downloadReport}
+              className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-100"
+            >
+              <FiDownload />
+              Save Report
+            </button>
+          </div>
+
+          <div className="mt-4 h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics.ordersByWeekday} margin={{ left: -12, right: 10, top: 6, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{ background: "#17192d", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10 }}
+                  formatter={(value) => [`${value} orders`, "Orders"]}
+                />
+                <Line type="monotone" dataKey="orders" stroke="#60a5fa" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+      </div>
+
+      <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
+        <h2 className="text-base font-semibold text-gray-100">Most Sold Foods</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-180 text-left">
+            <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-gray-400">
+              <tr>
+                <th className="px-3 py-2">Food</th>
+                <th className="px-3 py-2">Sold Qty</th>
+                <th className="px-3 py-2">Popularity</th>
+                <th className="px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analytics.mostOrdered.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-3 py-4 text-sm text-gray-400">
+                    No data available for this range.
+                  </td>
+                </tr>
+              ) : (
+                analytics.mostOrdered.map((food) => (
+                  <tr key={food.title} className="border-t border-white/8 text-sm text-gray-200">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        <Image src={food.imageUrl} alt={food.title} width={28} height={28} className="h-7 w-7 rounded-full" />
+                        <span className="text-gray-100">{food.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="font-medium text-white">{food.count}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="text-gray-200">{food.popularity}%</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300">
+                        {food.popularity >= 25 ? "Hot" : food.popularity >= 12 ? "Rising" : "Steady"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-gray-400">Meals Sold</p>
+            <p className="mt-1 text-3xl font-semibold text-white">{analytics.soldMeals.toLocaleString()}</p>
+            <p className={`mt-1 text-xs ${analytics.trends.orders.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
+              {analytics.trends.orders.isPositive ? "+" : ""}
+              {analytics.trends.orders.percent}% vs previous period
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-gray-400">Total Profit</p>
+            <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.totalRevenue)}</p>
+            <p className={`mt-1 text-xs ${analytics.trends.revenue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
+              {analytics.trends.revenue.isPositive ? "+" : ""}
+              {analytics.trends.revenue.percent}% vs previous period
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-gray-400">Delivered Revenue</p>
+            <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.deliveredRevenue)}</p>
+            <p className={`mt-1 text-xs ${analytics.trends.deliveredRevenue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
+              {analytics.trends.deliveredRevenue.isPositive ? "+" : ""}
+              {analytics.trends.deliveredRevenue.percent}% vs previous period
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-gray-400">Avg Order Value</p>
+            <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.avgOrderValue)}</p>
+            <p className={`mt-1 text-xs ${analytics.trends.avgOrderValue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
+              {analytics.trends.avgOrderValue.isPositive ? "+" : ""}
+              {analytics.trends.avgOrderValue.percent}% vs previous period
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/10 p-4 xl:max-w-3xl">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-200">Delivery vs Pending Trend</h3>
+            <div className="flex items-center gap-3 text-xs text-gray-300">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-300" /> Delivered
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-rose-300" /> Pending
+              </span>
+            </div>
+          </div>
+
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={analytics.mixedSeries} margin={{ left: -14, right: 8, top: 8, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{ background: "#17192d", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10 }}
+                />
+                <Area type="monotone" dataKey="pending" stroke="#fda4af" fill="#fda4af33" strokeWidth={2} />
+                <Area type="monotone" dataKey="delivered" stroke="#6ee7b7" fill="#6ee7b733" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </article>
+
+      {errorMessage ? <p className="text-sm text-amber-300">{errorMessage}</p> : null}
+    </section>
   );
 }

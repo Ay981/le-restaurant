@@ -40,7 +40,11 @@ export default function AdminSideRail() {
         >
           <FiPieChart />
         </Link>
-        <Link href="/orders" className="rounded-xl p-3 text-xl text-[#ea7c69]" aria-label="Open orders page">
+        <Link
+          href="/admin/orders"
+          className={`rounded-xl p-3 text-xl ${pathname === "/admin/orders" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
+          aria-label="Open orders page"
+        >
           <FiMail />
         </Link>
       </div>

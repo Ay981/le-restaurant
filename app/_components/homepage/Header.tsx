@@ -4,9 +4,19 @@ type HeaderProps = {
   name: string;
   date: string;
   searchPlaceholder: string;
+  searchValue: string;
+  isSearching: boolean;
+  onSearchChange: (value: string) => void;
 };
 
-export default function Header({ name, date, searchPlaceholder }: HeaderProps) {
+export default function Header({
+  name,
+  date,
+  searchPlaceholder,
+  searchValue,
+  isSearching,
+  onSearchChange,
+}: HeaderProps) {
   return (
     <div className="flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
@@ -18,9 +28,12 @@ export default function Header({ name, date, searchPlaceholder }: HeaderProps) {
         <FiSearch className="text-base" />
         <input
           type="text"
+          value={searchValue}
+          onChange={(event) => onSearchChange(event.target.value)}
           placeholder={searchPlaceholder}
           className="w-full bg-transparent text-base text-gray-200 outline-none placeholder:text-gray-500"
         />
+        {isSearching ? <span className="text-xs text-gray-500">...</span> : null}
       </div>
     </div>
   );

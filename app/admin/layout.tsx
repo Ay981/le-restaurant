@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,14 +37,30 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (profileError || profile?.role !== "admin") {
-        setIsAdmin(false);
-        setErrorMessage("Admin access is required for this section.");
+      if (profileError) {
+        setHasAccess(false);
+        setErrorMessage("Unable to verify role for this section.");
         setIsCheckingAccess(false);
         return;
       }
 
-      setIsAdmin(true);
+      const role = profile?.role;
+      const isAdmin = role === "admin";
+      const isStaff = role === "staff";
+
+      if (!isAdmin && !isStaff) {
+        setHasAccess(false);
+        setErrorMessage("Admin or staff access is required for this section.");
+        setIsCheckingAccess(false);
+        return;
+      }
+
+      if (isStaff && pathname !== "/admin/orders") {
+        router.replace("/admin/orders");
+        return;
+      }
+
+      setHasAccess(true);
       setErrorMessage(null);
       setIsCheckingAccess(false);
     };
@@ -56,12 +72,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return <AdminShellSkeleton />;
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <main className="app-bg-main min-h-screen px-4 py-6 text-white md:px-8 md:py-8">
         <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 p-6">
           <h1 className="text-2xl font-semibold">Admin Access Required</h1>
-          <p className="mt-2 text-sm text-gray-300">Only admin accounts can access this section.</p>
+          <p className="mt-2 text-sm text-gray-300">Only admin and staff accounts can access this section.</p>
           {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}
           <div className="mt-4">
             <Link href="/" className="app-text-accent hover:underline">

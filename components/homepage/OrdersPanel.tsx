@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import type { OrderItem, OrderSummary } from "@/lib/data";
-import OrderItemRow from "@/components/homepage/orders/OrderItemRow";
-import OrderSummarySection from "@/components/homepage/orders/OrderSummary";
-import OrderTypeTabs from "@/components/homepage/orders/OrderTypeTabs";
-import PaymentModal from "@/components/payments/PaymentModal";
+import OrderItemRow from "@/app/_components/homepage/orders/OrderItemRow";
+import OrderSummarySection from "@/app/_components/homepage/orders/OrderSummary";
+import OrderTypeTabs from "@/app/_components/homepage/orders/OrderTypeTabs";
+import PaymentModal from "@/app/_components/payments/PaymentModal";
 
 type OrdersPanelProps = {
   orderTypes: string[];
@@ -30,6 +30,8 @@ export default function OrdersPanel({
 }: OrdersPanelProps) {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [destination, setDestination] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [locationError, setLocationError] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const hasItems = orderItems.length > 0;
@@ -81,6 +83,30 @@ export default function OrdersPanel({
 
         {selectedOrderType === "Delivery" ? (
           <div className="mt-4 rounded-xl border border-white/8 p-3">
+            <label className="text-sm font-medium text-gray-200" htmlFor="delivery-customer-name-legacy">
+              Customer Name
+            </label>
+            <input
+              id="delivery-customer-name-legacy"
+              type="text"
+              value={customerName}
+              onChange={(event) => setCustomerName(event.target.value)}
+              placeholder="Enter customer name"
+              className="app-bg-elevated mt-2 h-11 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100 outline-none placeholder:text-gray-500"
+            />
+
+            <label className="mt-3 block text-sm font-medium text-gray-200" htmlFor="delivery-customer-phone-legacy">
+              Customer Phone
+            </label>
+            <input
+              id="delivery-customer-phone-legacy"
+              type="tel"
+              value={customerPhone}
+              onChange={(event) => setCustomerPhone(event.target.value)}
+              placeholder="Enter customer phone"
+              className="app-bg-elevated mt-2 h-11 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100 outline-none placeholder:text-gray-500"
+            />
+
             <label className="text-sm font-medium text-gray-200" htmlFor="delivery-destination">
               Destination
             </label>
@@ -144,6 +170,11 @@ export default function OrdersPanel({
           orderItems={orderItems}
           orderSummary={orderSummary}
           selectedOrderType={selectedOrderType}
+          deliveryDetails={{
+            destination,
+            customerName,
+            customerPhone,
+          }}
           onClose={() => setIsPaymentOpen(false)}
         />
       )}

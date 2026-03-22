@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
 import type { Category, Dish } from "@/lib/data";
 import Header from "./Header";
@@ -40,24 +40,91 @@ export default function MenuSection({
   selectedOrderType,
 }: MenuSectionProps) {
   const [activeCategory, setActiveCategory] = useState<MenuFilter>("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [searchedDishes, setSearchedDishes] = useState<Dish[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const categoryOptions: readonly MenuFilter[] = ["All", ...categories];
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    if (!debouncedSearchQuery) {
+      setSearchedDishes([]);
+      setSearchError(null);
+      setIsSearching(false);
+      return () => {
+        controller.abort();
+      };
+    }
+
+    const loadSearch = async () => {
+      setIsSearching(true);
+      setSearchError(null);
+
+      try {
+        const response = await fetch(`/api/dishes/search?q=${encodeURIComponent(debouncedSearchQuery)}`, {
+          signal: controller.signal,
+        });
+
+        const payload = (await response.json()) as { dishes?: Dish[]; message?: string };
+        if (!response.ok) {
+          throw new Error(payload.message ?? "Failed to search dishes.");
+        }
+
+        setSearchedDishes(payload.dishes ?? []);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setSearchError(error instanceof Error ? error.message : "Failed to search dishes.");
+        setSearchedDishes([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
+      }
+    };
+
+    void loadSearch();
+
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedSearchQuery]);
+
+  const visibleDishes = debouncedSearchQuery ? searchedDishes : dishes;
 
   const filteredDishes = useMemo(
     () =>
       activeCategory === "All"
-        ? dishes
-        : dishes.filter((dish) => dish.categories.includes(activeCategory)),
-    [dishes, activeCategory]
+        ? visibleDishes
+        : visibleDishes.filter((dish) => dish.categories.includes(activeCategory)),
+    [visibleDishes, activeCategory]
   );
 
-  
   return (
     <section className="flex-1 px-4 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5">
       <Header
         name={restaurantName}
         date={date}
         searchPlaceholder={searchPlaceholder}
+        searchValue={searchQuery}
+        isSearching={isSearching}
+        onSearchChange={setSearchQuery}
       />
 
       <div className="mt-4 flex gap-6 overflow-x-auto border-b border-white/10 pb-4 text-base whitespace-nowrap md:mt-5 md:gap-9 md:text-lg">
@@ -106,9 +173,15 @@ export default function MenuSection({
           />
         ))}
         {filteredDishes.length === 0 && (
-          <p className="text-base text-gray-400">No dishes found for this category.</p>
+          <p className="text-base text-gray-400">
+            {debouncedSearchQuery
+              ? "No dishes match your search."
+              : "No dishes found for this category."}
+          </p>
         )}
       </div>
+
+      {searchError ? <p className="mt-3 text-sm text-amber-300">{searchError}</p> : null}
     </section>
   );
 }

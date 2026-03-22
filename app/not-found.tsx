@@ -30,7 +30,7 @@ export default function NotFound() {
               Back to Dashboard
             </Link>
             <Link
-              href="/orders"
+              href="/admin/orders"
               className="app-hover-accent-soft inline-flex rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-gray-200"
             >
               Go to Orders

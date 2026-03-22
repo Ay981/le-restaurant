@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-type AdminAuthResult =
+export type AppRole = "customer" | "admin" | "staff";
+
+type RoleAuthResult =
   | {
       ok: true;
       userId: string;
+      role: AppRole;
     }
   | {
       ok: false;
@@ -38,7 +41,7 @@ function getBearerToken(request: Request): string | null {
   return token;
 }
 
-export async function requireAdminAccess(request: Request): Promise<AdminAuthResult> {
+export async function requireRoleAccess(request: Request, allowedRoles: AppRole[]): Promise<RoleAuthResult> {
   const token = getBearerToken(request);
   if (!token) {
     return {
@@ -85,20 +88,32 @@ export async function requireAdminAccess(request: Request): Promise<AdminAuthRes
     return {
       ok: false,
       status: 403,
-      message: "Unable to verify admin role.",
+      message: "Unable to verify user role.",
     };
   }
 
-  if (profile?.role !== "admin") {
+  const role = (profile?.role ?? "customer") as AppRole;
+
+  if (!allowedRoles.includes(role)) {
+    const allowedLabel = allowedRoles.join(" or ");
     return {
       ok: false,
       status: 403,
-      message: "Admin access required.",
+      message: `${allowedLabel} access required.`,
     };
   }
 
   return {
     ok: true,
     userId: user.id,
+    role,
   };
+}
+
+export async function requireAdminAccess(request: Request): Promise<RoleAuthResult> {
+  return requireRoleAccess(request, ["admin"]);
+}
+
+export async function requireAdminOrStaffAccess(request: Request): Promise<RoleAuthResult> {
+  return requireRoleAccess(request, ["admin", "staff"]);
 }

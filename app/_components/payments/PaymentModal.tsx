@@ -11,33 +11,21 @@ type PaymentModalProps = {
   orderItems: OrderItem[];
   orderSummary: OrderSummary;
   selectedOrderType: string;
+  deliveryDetails: {
+    destination: string;
+    customerName: string;
+    customerPhone: string;
+  };
   onClose: () => void;
 };
 
 type PaymentMethod = "bankTransfer" | "cash" | "teleBirr" | "mpesa";
 
-function mapOrderTypeToDb(value: string) {
-  const normalized = value.trim().toLowerCase();
-
-  if (normalized === "delivery") {
-    return "delivery";
-  }
-
-  if (normalized === "to go" || normalized === "to_go" || normalized === "togo") {
-    return "to_go";
-  }
-
-  return "dine_in";
-}
-
-function buildOrderNumber() {
-  return `ORD-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-}
-
 export default function PaymentModal({
   orderItems,
   orderSummary,
   selectedOrderType,
+  deliveryDetails,
   onClose,
 }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankTransfer");
@@ -78,6 +66,15 @@ export default function PaymentModal({
       return;
     }
 
+    const isDelivery = selectedOrderType.trim().toLowerCase() === "delivery";
+    if (
+      isDelivery &&
+      (!deliveryDetails.destination.trim() || !deliveryDetails.customerName.trim() || !deliveryDetails.customerPhone.trim())
+    ) {
+      setSubmitError("Delivery orders require destination, customer name, and customer phone.");
+      return;
+    }
+
     setSubmitError(null);
     setSubmitMessage(null);
     setIsSavingOrder(true);
@@ -87,45 +84,34 @@ export default function PaymentModal({
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
 
-      const customerUserId = session?.user?.id ?? null;
-      const orderNumber = buildOrderNumber();
-
-      const { data: createdOrder, error: orderInsertError } = await supabase
-        .from("orders")
-        .insert({
-          order_number: orderNumber,
-          order_type: mapOrderTypeToDb(selectedOrderType),
-          status: "completed",
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          selectedOrderType,
           discount: orderSummary.discount,
-          subtotal: orderSummary.subtotal,
-          customer_user_id: customerUserId,
-        })
-        .select("id")
-        .single();
+          items: orderItems.map((item) => ({
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            note: item.note,
+          })),
+          deliveryDetails,
+        }),
+      });
 
-      if (orderInsertError || !createdOrder?.id) {
-        throw new Error(orderInsertError?.message ?? "Could not create order record.");
-      }
-
-      const orderItemsPayload = orderItems.map((item) => ({
-        order_id: createdOrder.id,
-        dish_title_snapshot: item.title,
-        unit_price: item.price,
-        quantity: item.quantity,
-        note: item.note?.trim() || null,
-      }));
-
-      const { error: orderItemsInsertError } = await supabase
-        .from("order_items")
-        .insert(orderItemsPayload);
-
-      if (orderItemsInsertError) {
-        throw new Error(orderItemsInsertError.message);
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message ?? "Could not create order record.");
       }
 
       setSubmitMessage(
-        customerUserId
+        session?.user?.id
           ? "Payment confirmed. This order has been added to your history."
           : "Payment confirmed. Sign in next time to unlock order history and personalized suggestions.",
       );
