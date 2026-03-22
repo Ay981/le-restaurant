@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -19,6 +19,28 @@ type AdminOrder = {
   customerName?: string | null;
   customerPhone?: string | null;
   deliveryAddress?: string | null;
+  items?: Array<{
+    dishTitle: string;
+    unitPrice: number;
+    quantity: number;
+    lineTotal: number;
+    note: string | null;
+  }>;
+  receipt?: {
+    provider: string;
+    transactionReference: string;
+    verifiedAmount: number | null;
+    verifiedCurrency: string | null;
+    verifiedAt: string;
+  } | null;
+  feedback?: {
+    comment: string;
+    status: "open" | "resolved";
+    adminNote: string | null;
+    resolvedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
 };
 
 type OrdersResponse = {
@@ -111,6 +133,9 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 1 });
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [feedbackNotes, setFeedbackNotes] = useState<Record<string, string>>({});
+  const [updatingFeedbackOrderId, setUpdatingFeedbackOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -238,6 +263,50 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleFeedbackStatusChange = async (orderId: string, nextStatus: "open" | "resolved") => {
+    if (isUsingMockData) {
+      setSuccessMessage("Feedback actions are disabled in mock mode.");
+      return;
+    }
+
+    setUpdatingFeedbackOrderId(orderId);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch(`/api/admin/orders/${orderId}/feedback`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          status: nextStatus,
+          adminNote: feedbackNotes[orderId] ?? "",
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        feedback?: AdminOrder["feedback"];
+        message?: string;
+      };
+
+      if (!response.ok || !payload.feedback) {
+        throw new Error(payload.message ?? "Failed to update feedback.");
+      }
+
+      setOrders((previous) =>
+        previous.map((order) => (order.id === orderId ? { ...order, feedback: payload.feedback ?? null } : order)),
+      );
+      setSuccessMessage(nextStatus === "resolved" ? "Customer issue marked as resolved." : "Customer issue reopened.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to update feedback.");
+    } finally {
+      setUpdatingFeedbackOrderId(null);
+    }
+  };
+
   const totals = useMemo(() => {
     const pending = orders.filter((order) => order.status === "pending").length;
     const inProgress = orders.filter((order) => order.status === "in_progress").length;
@@ -303,51 +372,176 @@ export default function AdminOrdersPage() {
                 <th className="px-4 py-3 font-medium">Delivered</th>
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Details</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="px-4 py-4 text-sm text-gray-400" colSpan={7}>
+                  <td className="px-4 py-4 text-sm text-gray-400" colSpan={8}>
                     Loading orders...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-4 text-sm text-gray-400" colSpan={7}>
+                  <td className="px-4 py-4 text-sm text-gray-400" colSpan={8}>
                     No current orders found.
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order.id} className="border-t border-white/10 text-sm text-gray-200">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-white">{order.orderNumber}</div>
-                      {order.note ? <p className="mt-1 max-w-70 truncate text-xs text-gray-400">{order.note}</p> : null}
-                      {order.customerName ? <p className="mt-1 text-xs text-gray-400">{order.customerName}</p> : null}
-                    </td>
-                    <td className="px-4 py-3">{formatOrderType(order.orderType)}</td>
-                    <td className="px-4 py-3 text-gray-300">{formatDateTime(order.createdAt)}</td>
-                    <td className="px-4 py-3 text-gray-300">{order.startedAt ? formatDateTime(order.startedAt) : "-"}</td>
-                    <td className="px-4 py-3 text-gray-300">{order.deliveredAt ? formatDateTime(order.deliveredAt) : "-"}</td>
-                    <td className="px-4 py-3">{formatCurrency(order.total)}</td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={order.status}
-                        onChange={(event) => {
-                          void handleStatusChange(order.id, event.target.value as UiOrderStatus);
-                        }}
-                        disabled={updatingOrderId === order.id}
-                        className="app-bg-elevated w-full rounded-lg border border-white/15 px-2 py-2 text-sm text-gray-100 outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
+                  <Fragment key={order.id}>
+                    <tr className="border-t border-white/10 text-sm text-gray-200">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white">{order.orderNumber}</div>
+                        {order.note ? <p className="mt-1 max-w-70 truncate text-xs text-gray-400">{order.note}</p> : null}
+                        {order.customerName ? <p className="mt-1 text-xs text-gray-400">{order.customerName}</p> : null}
+                      </td>
+                      <td className="px-4 py-3">{formatOrderType(order.orderType)}</td>
+                      <td className="px-4 py-3 text-gray-300">{formatDateTime(order.createdAt)}</td>
+                      <td className="px-4 py-3 text-gray-300">{order.startedAt ? formatDateTime(order.startedAt) : "-"}</td>
+                      <td className="px-4 py-3 text-gray-300">{order.deliveredAt ? formatDateTime(order.deliveredAt) : "-"}</td>
+                      <td className="px-4 py-3">{formatCurrency(order.total)}</td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={order.status}
+                          onChange={(event) => {
+                            void handleStatusChange(order.id, event.target.value as UiOrderStatus);
+                          }}
+                          disabled={updatingOrderId === order.id}
+                          className="app-bg-elevated w-full rounded-lg border border-white/15 px-2 py-2 text-sm text-gray-100 outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedOrderId((previous) => (previous === order.id ? null : order.id));
+                            setFeedbackNotes((previous) => ({
+                              ...previous,
+                              [order.id]: previous[order.id] ?? order.feedback?.adminNote ?? "",
+                            }));
+                          }}
+                          className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200"
+                        >
+                          {expandedOrderId === order.id ? "Hide" : "View"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedOrderId === order.id ? (
+                      <tr className="border-t border-white/8 text-sm text-gray-300">
+                        <td className="px-4 py-4" colSpan={8}>
+                          <div className="grid gap-4 xl:grid-cols-2">
+                            <div className="rounded-xl border border-white/10 p-3">
+                              <p className="text-xs uppercase tracking-wide text-gray-400">Customer & Delivery</p>
+                              <p className="mt-2 text-sm">Name: {order.customerName ?? "-"}</p>
+                              <p className="mt-1 text-sm">Phone: {order.customerPhone ?? "-"}</p>
+                              <p className="mt-1 text-sm">Address: {order.deliveryAddress ?? "-"}</p>
+                            </div>
+
+                            <div className="rounded-xl border border-white/10 p-3">
+                              <p className="text-xs uppercase tracking-wide text-gray-400">Receipt Verification</p>
+                              {order.receipt ? (
+                                <>
+                                  <p className="mt-2 text-sm">Provider: {order.receipt.provider}</p>
+                                  <p className="mt-1 text-sm">Reference: {order.receipt.transactionReference}</p>
+                                  <p className="mt-1 text-sm">
+                                    Verified Amount: {order.receipt.verifiedAmount !== null ? formatCurrency(order.receipt.verifiedAmount) : "-"}
+                                    {order.receipt.verifiedCurrency ? ` (${order.receipt.verifiedCurrency})` : ""}
+                                  </p>
+                                  <p className="mt-1 text-sm">Verified At: {formatDateTime(order.receipt.verifiedAt)}</p>
+                                </>
+                              ) : (
+                                <p className="mt-2 text-sm text-gray-400">No receipt verification found.</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-white/10 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400">Order Items</p>
+                            {order.items && order.items.length > 0 ? (
+                              <div className="mt-2 divide-y divide-white/8">
+                                {order.items.map((item, index) => (
+                                  <div key={`${order.id}-${item.dishTitle}-${index}`} className="grid grid-cols-[1fr_auto_auto] gap-3 py-2">
+                                    <div>
+                                      <p className="text-sm text-gray-200">{item.dishTitle}</p>
+                                      {item.note ? <p className="text-xs text-gray-400">{item.note}</p> : null}
+                                    </div>
+                                    <p className="text-sm text-gray-300">x{item.quantity}</p>
+                                    <p className="text-sm text-gray-100">{formatCurrency(item.lineTotal || item.unitPrice * item.quantity)}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-2 text-sm text-gray-400">No item details found.</p>
+                            )}
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-white/10 p-3">
+                            <p className="text-xs uppercase tracking-wide text-gray-400">Customer Comment / Issue</p>
+                            {order.feedback ? (
+                              <>
+                                <p className="mt-2 text-sm text-gray-200">{order.feedback.comment}</p>
+                                <p className="mt-2 text-xs text-gray-400">
+                                  Status: {order.feedback.status === "resolved" ? "Resolved" : "Open"} • Updated: {formatDateTime(order.feedback.updatedAt)}
+                                </p>
+                                {order.feedback.resolvedAt ? (
+                                  <p className="mt-1 text-xs text-emerald-300">Resolved at: {formatDateTime(order.feedback.resolvedAt)}</p>
+                                ) : null}
+
+                                <label className="mt-3 block text-xs text-gray-400">
+                                  Admin note
+                                  <textarea
+                                    value={feedbackNotes[order.id] ?? order.feedback.adminNote ?? ""}
+                                    onChange={(event) =>
+                                      setFeedbackNotes((previous) => ({
+                                        ...previous,
+                                        [order.id]: event.target.value,
+                                      }))
+                                    }
+                                    rows={3}
+                                    className="app-bg-elevated mt-2 w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100 outline-none"
+                                    placeholder="Write the action taken for this issue"
+                                  />
+                                </label>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleFeedbackStatusChange(order.id, "resolved");
+                                    }}
+                                    disabled={updatingFeedbackOrderId === order.id}
+                                    className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Mark Resolved
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      void handleFeedbackStatusChange(order.id, "open");
+                                    }}
+                                    disabled={updatingFeedbackOrderId === order.id}
+                                    className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Reopen
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="mt-2 text-sm text-gray-400">No customer comment yet.</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 ))
               )}
             </tbody>

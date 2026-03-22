@@ -20,6 +20,34 @@ type OrderRow = {
   delivery_address: string | null;
 };
 
+type OrderItemRow = {
+  order_id: string;
+  dish_title_snapshot: string;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+  note: string | null;
+};
+
+type ReceiptRow = {
+  order_number: string;
+  provider: string;
+  transaction_reference: string;
+  verified_amount: number | null;
+  verified_currency: string | null;
+  created_at: string;
+};
+
+type FeedbackRow = {
+  order_id: string;
+  comment: string;
+  status: "open" | "resolved";
+  admin_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 function toUiStatus(status: DbOrderStatus): UiOrderStatus {
   if (status === "pending") return "pending";
   if (status === "preparing") return "in_progress";
@@ -64,7 +92,116 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
 
-    const orders = ((data ?? []) as OrderRow[]).map((order) => ({
+    const orderRows = (data ?? []) as OrderRow[];
+    const orderIds = orderRows.map((order) => order.id);
+    const orderNumbers = orderRows.map((order) => order.order_number);
+
+    let orderItemsByOrderId = new Map<string, Array<{
+      dishTitle: string;
+      unitPrice: number;
+      quantity: number;
+      lineTotal: number;
+      note: string | null;
+    }>>();
+
+    if (orderIds.length > 0) {
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from("order_items")
+        .select("order_id, dish_title_snapshot, unit_price, quantity, line_total, note")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: true });
+
+      if (orderItemsError) {
+        return NextResponse.json({ message: orderItemsError.message }, { status: 400 });
+      }
+
+      const typedOrderItems = (orderItemsData ?? []) as OrderItemRow[];
+      orderItemsByOrderId = typedOrderItems.reduce((accumulator, item) => {
+        const previous = accumulator.get(item.order_id) ?? [];
+        previous.push({
+          dishTitle: item.dish_title_snapshot,
+          unitPrice: Number(item.unit_price) || 0,
+          quantity: Number(item.quantity) || 0,
+          lineTotal: Number(item.line_total) || 0,
+          note: item.note,
+        });
+        accumulator.set(item.order_id, previous);
+        return accumulator;
+      }, new Map<string, Array<{ dishTitle: string; unitPrice: number; quantity: number; lineTotal: number; note: string | null }>>());
+    }
+
+    let latestReceiptByOrderNumber = new Map<string, {
+      provider: string;
+      transactionReference: string;
+      verifiedAmount: number | null;
+      verifiedCurrency: string | null;
+      verifiedAt: string;
+    }>();
+
+    let feedbackByOrderId = new Map<string, {
+      comment: string;
+      status: "open" | "resolved";
+      adminNote: string | null;
+      resolvedAt: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>();
+
+    if (orderNumbers.length > 0) {
+      const { data: receiptsData, error: receiptsError } = await supabase
+        .from("payment_receipt_verifications")
+        .select("order_number, provider, transaction_reference, verified_amount, verified_currency, created_at")
+        .in("order_number", orderNumbers)
+        .order("created_at", { ascending: false });
+
+      if (receiptsError) {
+        return NextResponse.json({ message: receiptsError.message }, { status: 400 });
+      }
+
+      const typedReceipts = (receiptsData ?? []) as ReceiptRow[];
+      latestReceiptByOrderNumber = typedReceipts.reduce((accumulator, receipt) => {
+        if (!accumulator.has(receipt.order_number)) {
+          accumulator.set(receipt.order_number, {
+            provider: receipt.provider,
+            transactionReference: receipt.transaction_reference,
+            verifiedAmount: receipt.verified_amount === null ? null : Number(receipt.verified_amount),
+            verifiedCurrency: receipt.verified_currency,
+            verifiedAt: receipt.created_at,
+          });
+        }
+
+        return accumulator;
+      }, new Map<string, { provider: string; transactionReference: string; verifiedAmount: number | null; verifiedCurrency: string | null; verifiedAt: string }>());
+    }
+
+    if (orderIds.length > 0) {
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from("order_feedback")
+        .select("order_id, comment, status, admin_note, resolved_at, created_at, updated_at")
+        .in("order_id", orderIds)
+        .order("updated_at", { ascending: false });
+
+      if (feedbackError) {
+        return NextResponse.json({ message: feedbackError.message }, { status: 400 });
+      }
+
+      const typedFeedback = (feedbackData ?? []) as FeedbackRow[];
+      feedbackByOrderId = typedFeedback.reduce((accumulator, feedback) => {
+        if (!accumulator.has(feedback.order_id)) {
+          accumulator.set(feedback.order_id, {
+            comment: feedback.comment,
+            status: feedback.status,
+            adminNote: feedback.admin_note,
+            resolvedAt: feedback.resolved_at,
+            createdAt: feedback.created_at,
+            updatedAt: feedback.updated_at,
+          });
+        }
+        return accumulator;
+      }, new Map<string, { comment: string; status: "open" | "resolved"; adminNote: string | null; resolvedAt: string | null; createdAt: string; updatedAt: string }>());
+    }
+
+    const orders = orderRows.map((order) => ({
       id: order.id,
       orderNumber: order.order_number,
       orderType: order.order_type,
@@ -77,6 +214,9 @@ export async function GET(request: Request) {
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
       deliveryAddress: order.delivery_address,
+      items: orderItemsByOrderId.get(order.id) ?? [],
+      receipt: latestReceiptByOrderNumber.get(order.order_number) ?? null,
+      feedback: feedbackByOrderId.get(order.id) ?? null,
     }));
 
     return NextResponse.json({

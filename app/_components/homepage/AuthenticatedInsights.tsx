@@ -7,11 +7,13 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 type PreviousOrder = {
   orderNumber: string;
   createdAt: string;
+  status: string;
 };
 
 type OrderWithItems = {
   order_number: string;
   created_at: string;
+  status: string;
   order_items: Array<{
     dish_title_snapshot: string;
     quantity: number;
@@ -28,6 +30,13 @@ function formatShortDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function formatStatusLabel(status: string) {
+  if (status === "preparing") return "In Progress";
+  if (status === "completed" || status === "served") return "Delivered";
+  if (status === "pending") return "Pending";
+  return status;
 }
 
 export default function AuthenticatedInsights() {
@@ -78,6 +87,7 @@ export default function AuthenticatedInsights() {
         const recentOrders = typedOrders.slice(0, 3).map((item) => ({
           orderNumber: item.order_number,
           createdAt: item.created_at,
+          status: item.status,
         }));
 
         const dishCount = new Map<string, number>();
@@ -155,11 +165,19 @@ export default function AuthenticatedInsights() {
           <ul className="mt-2 space-y-1 text-sm text-gray-200">
             {previousOrders.map((order) => (
               <li key={`${order.orderNumber}-${order.createdAt}`} className="flex items-center justify-between">
-                <span>{order.orderNumber}</span>
+                <div>
+                  <span>{order.orderNumber}</span>
+                  <span className="ml-2 text-xs text-gray-400">{formatStatusLabel(order.status)}</span>
+                </div>
                 <span className="text-xs text-gray-400">{formatShortDate(order.createdAt)}</span>
               </li>
             ))}
           </ul>
+          <div className="mt-2">
+            <Link href="/my-orders" className="app-text-accent text-xs hover:underline">
+              Track my orders
+            </Link>
+          </div>
         </div>
       ) : null}
 

@@ -10,6 +10,8 @@ type OrderRow = {
   status: DbOrderStatus | "served";
   started_at: string | null;
   delivered_at: string | null;
+  customer_user_id: string | null;
+  order_number: string;
 };
 
 function toDbStatus(status: UiOrderStatus): DbOrderStatus {
@@ -78,7 +80,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const { data: currentOrder, error: currentOrderError } = await supabase
       .from("orders")
-      .select("id, status, started_at, delivered_at")
+      .select("id, status, started_at, delivered_at, customer_user_id, order_number")
       .eq("id", id)
       .single();
 
@@ -141,6 +143,23 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if (auditError) {
       return NextResponse.json({ message: auditError.message }, { status: 400 });
+    }
+
+    if (currentStatus !== nextStatus && currentOrder.customer_user_id) {
+      const nextStatusLabel = nextStatus === "in_progress" ? "In Progress" : nextStatus === "pending" ? "Pending" : "Delivered";
+
+      const { error: notificationError } = await supabase.from("order_notifications").insert({
+        order_id: id,
+        customer_user_id: currentOrder.customer_user_id,
+        title: "Order Status Updated",
+        message: `${currentOrder.order_number} is now ${nextStatusLabel}.`,
+        status_from: currentOrder.status,
+        status_to: nextDbStatus,
+      });
+
+      if (notificationError) {
+        return NextResponse.json({ message: notificationError.message }, { status: 400 });
+      }
     }
 
     const order = data as OrderRow;

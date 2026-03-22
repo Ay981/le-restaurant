@@ -3,7 +3,6 @@ import Sidenav from "@/components/navigation/Sidenav";
 import {
   categories,
   dishes,
-  orderItems,
   orderSummary,
   orderTypes,
   restaurantInfo,
@@ -107,7 +106,7 @@ export default async function Page() {
           categories={menuCategories}
           dishes={menuDishes}
           orderTypes={orderTypes}
-          initialOrderItems={orderItems}
+          initialOrderItems={[]}
           initialOrderSummary={orderSummary}
         />
       </div>
