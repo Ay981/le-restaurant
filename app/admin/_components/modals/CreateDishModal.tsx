@@ -1,4 +1,7 @@
+"use client";
+
 import { useEffect, useId, useRef, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import type { CategoryRecord } from "../types";
 
 type CreateDishModalProps = {
@@ -38,6 +41,8 @@ export default function CreateDishModal({
   onCategoryChange,
   onImageFileChange,
 }: CreateDishModalProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const titleInputRef = useRef<HTMLInputElement>(null);
   const titleInputId = useId();
   const priceInputId = useId();
@@ -126,17 +131,17 @@ export default function CreateDishModal({
         <div className="app-bg-elevated flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <h3 id={headingId} className="text-2xl font-semibold text-white">
-              Create New Dish
+              {isAmharic ? "አዲስ ምግብ ፍጠር" : "Create New Dish"}
             </h3>
             <p id={descriptionId} className="mt-1 text-sm text-gray-400">
-              Craft a beautiful menu item with image upload.
+              {isAmharic ? "በምስል ጭነት የተሟላ የሜኑ ንጥል ይፍጠሩ።" : "Craft a beautiful menu item with image upload."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            aria-label="Close create dish modal"
+            aria-label={isAmharic ? "የምግብ ፍጠር ሞዳልን ዝጋ" : "Close create dish modal"}
             className="rounded-xl border border-white/15 px-3 py-2 text-sm text-gray-200 transition hover:border-white/30"
           >
             ✕
@@ -147,7 +152,7 @@ export default function CreateDishModal({
           <div className="flex h-full flex-col gap-4">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="text-sm text-gray-300">
-                <span className="mb-1.5 block">Dish title</span>
+                <span className="mb-1.5 block">{isAmharic ? "የምግብ ርዕስ" : "Dish title"}</span>
                 <input
                   id={titleInputId}
                   ref={titleInputRef}
@@ -156,20 +161,20 @@ export default function CreateDishModal({
                   className={`app-bg-elevated h-11 w-full rounded-xl border px-3 text-sm text-gray-100 ${
                     shouldShowTitleError ? "border-red-400/80" : "border-white/10"
                   }`}
-                  placeholder="e.g. Pepperoni Pizza"
+                  placeholder={isAmharic ? "ለምሳሌ፡ ፔፐሮኒ ፒዛ" : "e.g. Pepperoni Pizza"}
                   required
                   aria-invalid={shouldShowTitleError}
                   aria-describedby={shouldShowTitleError ? `${titleInputId}-error` : undefined}
                 />
                 {shouldShowTitleError ? (
                   <span id={`${titleInputId}-error`} className="mt-1 block text-xs text-red-300">
-                    Dish title is required.
+                    {isAmharic ? "የምግብ ርዕስ ያስፈልጋል።" : "Dish title is required."}
                   </span>
                 ) : null}
               </label>
 
               <label className="text-sm text-gray-300">
-                <span className="mb-1.5 block">Price</span>
+                <span className="mb-1.5 block">{isAmharic ? "ዋጋ" : "Price"}</span>
                 <input
                   id={priceInputId}
                   type="number"
@@ -188,13 +193,13 @@ export default function CreateDishModal({
                 />
                 {shouldShowPriceError ? (
                   <span id={`${priceInputId}-error`} className="mt-1 block text-xs text-red-300">
-                    Price must be 0 or greater.
+                    {isAmharic ? "ዋጋ 0 ወይም ከዚያ በላይ መሆን አለበት።" : "Price must be 0 or greater."}
                   </span>
                 ) : null}
               </label>
 
               <label className="text-sm text-gray-300">
-                <span className="mb-1.5 block">Availability</span>
+                <span className="mb-1.5 block">{isAmharic ? "ተገኝነት" : "Availability"}</span>
                 <input
                   id={availabilityInputId}
                   type="number"
@@ -213,20 +218,20 @@ export default function CreateDishModal({
                 />
                 {shouldShowAvailabilityError ? (
                   <span id={`${availabilityInputId}-error`} className="mt-1 block text-xs text-red-300">
-                    Availability must be a whole number 0 or greater.
+                    {isAmharic ? "ተገኝነት 0 ወይም ከዚያ በላይ ሙሉ ቁጥር መሆን አለበት።" : "Availability must be a whole number 0 or greater."}
                   </span>
                 ) : null}
               </label>
 
               <label className="text-sm text-gray-300">
-                <span className="mb-1.5 block">Category</span>
+                <span className="mb-1.5 block">{isAmharic ? "ምድብ" : "Category"}</span>
                 <select
                   id={categorySelectId}
                   value={categoryId}
                   onChange={(event) => onCategoryChange(event.target.value)}
                   className="app-bg-elevated h-11 w-full rounded-xl border border-white/10 px-3 text-sm text-gray-100"
                 >
-                  <option value="">No category</option>
+                  <option value="">{isAmharic ? "ምድብ የለም" : "No category"}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -237,9 +242,9 @@ export default function CreateDishModal({
             </div>
 
             <label htmlFor={imageInputId} className="text-sm text-gray-300">
-              <span className="mb-1.5 block">Dish image</span>
+              <span className="mb-1.5 block">{isAmharic ? "የምግብ ምስል" : "Dish image"}</span>
               <span className="app-bg-main flex min-h-40 cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/25 px-3 py-4 text-center text-sm text-gray-300 transition hover:border-white/40">
-                {selectedFileName ? `Selected: ${selectedFileName}` : "Upload image (JPG, PNG, WEBP, GIF)"}
+                {selectedFileName ? `${isAmharic ? "የተመረጠ:" : "Selected:"} ${selectedFileName}` : isAmharic ? "ምስል ይጫኑ (JPG, PNG, WEBP, GIF)" : "Upload image (JPG, PNG, WEBP, GIF)"}
               </span>
               <input
                 id={imageInputId}
@@ -252,12 +257,12 @@ export default function CreateDishModal({
           </div>
 
           <div className="app-bg-main flex h-full flex-col rounded-2xl border border-white/10 p-4">
-            <p className="text-xs uppercase tracking-wide text-gray-400">Preview</p>
+            <p className="text-xs uppercase tracking-wide text-gray-400">{isAmharic ? "ቅድመ እይታ" : "Preview"}</p>
             <div className="mt-3 h-56 overflow-hidden rounded-xl border border-white/10">
               <div className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url(${imagePreview})` }} />
             </div>
             <p className="mt-3 text-xs text-gray-400">
-              {selectedFileName ? `Selected file: ${selectedFileName}` : "Using default image preview."}
+              {selectedFileName ? `${isAmharic ? "የተመረጠ ፋይል:" : "Selected file:"} ${selectedFileName}` : isAmharic ? "ነባሪ ምስል ቅድመ እይታ ተጠቃሚ ነው።" : "Using default image preview."}
             </p>
           </div>
         </div>
@@ -269,14 +274,14 @@ export default function CreateDishModal({
             disabled={isSaving}
             className="app-bg-elevated rounded-xl px-4 py-2 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Cancel
+              {isAmharic ? "ሰርዝ" : "Cancel"}
           </button>
           <button
             type="submit"
             disabled={isSaving || !isFormValid}
             className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Creating..." : "Create Dish"}
+              {isSaving ? (isAmharic ? "በመፍጠር ላይ..." : "Creating...") : isAmharic ? "ምግብ ፍጠር" : "Create Dish"}
           </button>
         </div>
       </form>

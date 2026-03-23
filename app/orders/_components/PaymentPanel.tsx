@@ -2,8 +2,11 @@
 
 import TransactionUpload from "@/app/_components/payments/TransactionUpload";
 import { usePaymentForm } from "../_hooks/usePaymentForm";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 export function PaymentPanel() {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const {
     form,
     fieldErrors,
@@ -24,45 +27,45 @@ export function PaymentPanel() {
 
   return (
     <section className="p-5 xl:p-6">
-      <h2 className="text-2xl font-semibold">Payment</h2>
-      <p className="mt-1 text-sm text-gray-400">3 payment methods available</p>
+      <h2 className="text-2xl font-semibold">{isAmharic ? "ክፍያ" : "Payment"}</h2>
+      <p className="mt-1 text-sm text-gray-400">{isAmharic ? "3 የክፍያ ዘዴዎች አሉ" : "3 payment methods available"}</p>
 
       <div className="mt-6">
-        <h3 className="text-sm font-medium text-gray-200">Payment Method</h3>
+        <h3 className="text-sm font-medium text-gray-200">{isAmharic ? "የክፍያ ዘዴ" : "Payment Method"}</h3>
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setField("paymentMethod", "card")}
             className={`${form.paymentMethod === "card" ? "app-bg-elevated text-gray-100" : "text-gray-300"} rounded-xl border border-white/10 px-3 py-3 text-xs`}
           >
-            Credit Card
+            {isAmharic ? "ክሬዲት ካርድ" : "Credit Card"}
           </button>
           <button
             type="button"
             onClick={() => setField("paymentMethod", "paypal")}
             className={`${form.paymentMethod === "paypal" ? "app-bg-elevated text-gray-100" : "text-gray-300"} rounded-xl border border-white/10 px-3 py-3 text-xs`}
           >
-            Paypal
+            {isAmharic ? "ፔይፓል" : "Paypal"}
           </button>
           <button
             type="button"
             onClick={() => setField("paymentMethod", "cash")}
             className={`${form.paymentMethod === "cash" ? "app-bg-elevated text-gray-100" : "text-gray-300"} rounded-xl border border-white/10 px-3 py-3 text-xs`}
           >
-            Cash
+            {isAmharic ? "ጥሬ" : "Cash"}
           </button>
         </div>
       </div>
 
       <div className="mt-5 grid gap-4">
         <label className="text-sm text-gray-300">
-          Cardholder Name
+          {isAmharic ? "የካርድ ባለቤት ስም" : "Cardholder Name"}
           <input
             className={`app-bg-elevated mt-2 h-11 w-full rounded-xl border px-3 text-gray-100 ${showError("cardholderName") ? "border-red-400/80" : "border-white/10"}`}
             value={form.cardholderName}
             onChange={(event) => setField("cardholderName", event.target.value)}
             onBlur={() => markTouched("cardholderName")}
-            placeholder="Enter cardholder name"
+            placeholder={isAmharic ? "የካርድ ባለቤት ስም ያስገቡ" : "Enter cardholder name"}
             autoComplete="cc-name"
             disabled={!isCardPayment}
           />
@@ -70,7 +73,7 @@ export function PaymentPanel() {
         </label>
 
         <label className="text-sm text-gray-300">
-          Card Number
+          {isAmharic ? "የካርድ ቁጥር" : "Card Number"}
           <input
             className={`app-bg-elevated mt-2 h-11 w-full rounded-xl border px-3 text-gray-100 ${showError("cardNumber") ? "border-red-400/80" : "border-white/10"}`}
             value={form.cardNumber}
@@ -86,7 +89,7 @@ export function PaymentPanel() {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-gray-300">
-            Expiration Date
+            {isAmharic ? "የሚያበቃበት ቀን" : "Expiration Date"}
             <input
               className={`app-bg-elevated mt-2 h-11 w-full rounded-xl border px-3 text-gray-100 ${showError("expirationDate") ? "border-red-400/80" : "border-white/10"}`}
               value={form.expirationDate}
@@ -118,24 +121,24 @@ export function PaymentPanel() {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-gray-300">
-            Order Type
+            {isAmharic ? "የትዕዛዝ አይነት" : "Order Type"}
             <select
               className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100"
               value={form.orderType}
               onChange={(event) => setField("orderType", event.target.value as "dine_in" | "to_go")}
             >
-              <option value="dine_in">Dine In</option>
-              <option value="to_go">To Go</option>
+              <option value="dine_in">{isAmharic ? "በሬስቶራንት" : "Dine In"}</option>
+              <option value="to_go">{isAmharic ? "ለመውሰድ" : "To Go"}</option>
             </select>
           </label>
           <label className="text-sm text-gray-300">
-            Table no.
+            {isAmharic ? "የጠረጴዛ ቁጥር" : "Table no."}
             <input
               className={`app-bg-elevated mt-2 h-11 w-full rounded-xl border px-3 text-gray-100 ${showError("tableNo") ? "border-red-400/80" : "border-white/10"}`}
               value={form.tableNo}
               onChange={(event) => setField("tableNo", event.target.value.replace(/\D/g, "").slice(0, 4))}
               onBlur={() => markTouched("tableNo")}
-              placeholder={form.orderType === "dine_in" ? "Enter table number" : "N/A for To Go"}
+              placeholder={form.orderType === "dine_in" ? (isAmharic ? "የጠረጴዛ ቁጥር ያስገቡ" : "Enter table number") : isAmharic ? "ለመውሰድ አይደለም" : "N/A for To Go"}
               inputMode="numeric"
               disabled={form.orderType !== "dine_in"}
             />
@@ -157,7 +160,7 @@ export function PaymentPanel() {
           onClick={handleCancel}
           className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-gray-200"
         >
-          Cancel
+          {isAmharic ? "ሰርዝ" : "Cancel"}
         </button>
         <button
           type="button"
@@ -165,7 +168,7 @@ export function PaymentPanel() {
           disabled={!isPaymentReady}
           className="app-bg-accent rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirm Payment
+          {isAmharic ? "ክፍያ አረጋግጥ" : "Confirm Payment"}
         </button>
       </div>
 

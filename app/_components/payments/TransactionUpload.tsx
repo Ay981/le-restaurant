@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type VerificationState = {
   verified: boolean;
@@ -28,6 +29,8 @@ export default function TransactionUpload({
   expectedAmount = 0,
   onVerificationChange = () => {},
 }: TransactionUploadProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [file, setFile] = useState<File | null>(null);
   const [accountSuffix, setAccountSuffix] = useState("");
   const [manualReference, setManualReference] = useState("");
@@ -50,7 +53,7 @@ export default function TransactionUpload({
     setIsVerifying(true);
     setStatusMessage(null);
     setVerifiedReference(null);
-    onVerificationChange({ verified: false, message: "Verifying receipt..." });
+    onVerificationChange({ verified: false, message: isAmharic ? "ደረሰኝን በማረጋገጥ ላይ..." : "Verifying receipt..." });
 
     try {
       const formData = new FormData();
@@ -99,7 +102,7 @@ export default function TransactionUpload({
         transactionReference: transactionRef,
       });
     } catch {
-      const message = "Could not verify the receipt. Please try again.";
+      const message = isAmharic ? "ደረሰኙን ማረጋገጥ አልተቻለም። እባክዎ ደግመው ይሞክሩ።" : "Could not verify the receipt. Please try again.";
       setStatusMessage(message);
       setVerifiedReference(null);
       onVerificationChange({ verified: false, message });
@@ -110,13 +113,15 @@ export default function TransactionUpload({
 
   return (
     <div className="mt-6 rounded-2xl border border-white/10 p-4 md:p-5">
-      <h3 className="text-lg font-semibold text-white">Upload your receipt file</h3>
+      <h3 className="text-lg font-semibold text-white">{isAmharic ? "የደረሰኝ ፋይል ይጫኑ" : "Upload your receipt file"}</h3>
       <p className="mt-1 text-sm text-gray-400">
-        Add your payment receipt (image or PDF) and we will verify it before payment confirmation.
+        {isAmharic
+          ? "የክፍያ ደረሰኝዎን (ምስል ወይም PDF) ያክሉ እና ከክፍያ ማረጋገጫ በፊት እናረጋግጣለን።"
+          : "Add your payment receipt (image or PDF) and we will verify it before payment confirmation."}
       </p>
 
       <label className="app-bg-elevated mt-4 block cursor-pointer rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-200 hover:border-white/20">
-        <span>{file ? "Change File" : "Choose File"}</span>
+        <span>{file ? (isAmharic ? "ፋይል ቀይር" : "Change File") : isAmharic ? "ፋይል ምረጥ" : "Choose File"}</span>
         <input
           type="file"
           accept="image/*,application/pdf"
@@ -125,7 +130,7 @@ export default function TransactionUpload({
             setFile(event.target.files?.[0] ?? null);
             setStatusMessage(null);
             setVerifiedReference(null);
-            onVerificationChange({ verified: false, message: "Upload a receipt and verify it." });
+            onVerificationChange({ verified: false, message: isAmharic ? "ደረሰኝ ይጫኑ እና ያረጋግጡ።" : "Upload a receipt and verify it." });
           }}
         />
       </label>
@@ -136,11 +141,13 @@ export default function TransactionUpload({
         onClick={handleVerifyReceipt}
         className="app-bg-accent mt-3 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isVerifying ? "Verifying..." : "Verify Receipt"}
+        {isVerifying ? (isAmharic ? "በማረጋገጥ ላይ..." : "Verifying...") : isAmharic ? "ደረሰኝን አረጋግጥ" : "Verify Receipt"}
       </button>
 
       <label className="mt-3 block text-xs text-gray-400">
-        Transaction reference {isPdf ? "(required for PDF)" : "(optional)"}
+        {isAmharic
+          ? `የግብይት ማጣቀሻ ${isPdf ? "(ለ PDF ያስፈልጋል)" : "(አማራጭ)"}`
+          : `Transaction reference ${isPdf ? "(required for PDF)" : "(optional)"}`}
         <input
           value={manualReference}
           onChange={(event) => setManualReference(event.target.value)}
@@ -151,7 +158,7 @@ export default function TransactionUpload({
       </label>
 
       <label className="mt-3 block text-xs text-gray-400">
-        CBE account suffix (optional, 8 digits)
+        {isAmharic ? "የCBE መለያ መጨረሻ (አማራጭ፣ 8 አሃዞች)" : "CBE account suffix (optional, 8 digits)"}
         <input
           value={accountSuffix}
           onChange={(event) => setAccountSuffix(event.target.value)}
@@ -170,21 +177,21 @@ export default function TransactionUpload({
 
       <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
         <div className="app-bg-elevated rounded-xl border border-white/10 px-3 py-2">
-          <p className="text-gray-400">File Name</p>
-          <p className="truncate text-gray-100">{file?.name ?? "No screenshot uploaded"}</p>
+          <p className="text-gray-400">{isAmharic ? "የፋይል ስም" : "File Name"}</p>
+          <p className="truncate text-gray-100">{file?.name ?? (isAmharic ? "ምንም ፋይል አልተጫነም" : "No screenshot uploaded")}</p>
         </div>
         <div className="app-bg-elevated rounded-xl border border-white/10 px-3 py-2">
-          <p className="text-gray-400">File Size</p>
+          <p className="text-gray-400">{isAmharic ? "የፋይል መጠን" : "File Size"}</p>
           <p className="text-gray-100">{file ? formatBytes(file.size) : "N/A"}</p>
         </div>
         <div className="app-bg-elevated rounded-xl border border-white/10 px-3 py-2">
-          <p className="text-gray-400">Captured Date</p>
+          <p className="text-gray-400">{isAmharic ? "የተነሳበት ቀን" : "Captured Date"}</p>
           <p className="text-gray-100">
             {file ? new Date(file.lastModified).toLocaleString() : "N/A"}
           </p>
         </div>
         <div className="app-bg-elevated rounded-xl border border-white/10 px-3 py-2">
-          <p className="text-gray-400">Transaction Reference</p>
+          <p className="text-gray-400">{isAmharic ? "የግብይት ማጣቀሻ" : "Transaction Reference"}</p>
           <p className="truncate text-gray-100">{transactionReference}</p>
         </div>
       </div>

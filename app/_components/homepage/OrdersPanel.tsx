@@ -6,6 +6,7 @@ import OrderItemRow from "@/app/_components/homepage/orders/OrderItemRow";
 import OrderSummarySection from "@/app/_components/homepage/orders/OrderSummary";
 import OrderTypeTabs from "@/app/_components/homepage/orders/OrderTypeTabs";
 import PaymentModal from "@/app/_components/payments/PaymentModal";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type OrdersPanelProps = {
   orderTypes: string[];
@@ -28,6 +29,8 @@ export default function OrdersPanel({
   onQuantityChange,
   onOrderTypeChange,
 }: OrdersPanelProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [destination, setDestination] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -38,7 +41,7 @@ export default function OrdersPanel({
 
   const handleUseCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
-      setLocationError("Location is not supported on this device.");
+      setLocationError(isAmharic ? "በዚህ መሣሪያ ላይ አካባቢ መለያ አይደገፍም።" : "Location is not supported on this device.");
       return;
     }
 
@@ -51,7 +54,7 @@ export default function OrdersPanel({
         setIsLocating(false);
       },
       () => {
-        setLocationError("Unable to get your current location.");
+        setLocationError(isAmharic ? "የአሁኑን አካባቢዎን ማግኘት አልተቻለም።" : "Unable to get your current location.");
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -63,7 +66,7 @@ export default function OrdersPanel({
       <aside className="app-bg-panel flex w-full flex-col border-t border-white/8 px-4 py-5 md:px-6 md:py-6 xl:h-screen xl:w-98.75 xl:border-l xl:border-t-0">
         <div className="border-b border-white/8 pb-5">
           <h2 className="text-2xl font-semibold text-white">
-            Orders {orderSummary.orderNumber}
+            {isAmharic ? "ትዕዛዞች" : "Orders"} {orderSummary.orderNumber}
           </h2>
 
           <OrderTypeTabs
@@ -74,48 +77,48 @@ export default function OrdersPanel({
         </div>
 
         <div className="mt-6 flex items-center justify-between border-b border-white/8 pb-4 text-sm font-semibold text-gray-300">
-          <span>Item</span>
+          <span>{isAmharic ? "ንጥል" : "Item"}</span>
           <div className="flex items-center gap-7 pr-1 sm:gap-11">
-            <span>Qty</span>
-            <span>Price</span>
+            <span>{isAmharic ? "ብዛት" : "Qty"}</span>
+            <span>{isAmharic ? "ዋጋ" : "Price"}</span>
           </div>
         </div>
 
         {selectedOrderType === "Delivery" ? (
           <div className="mt-4 rounded-xl border border-white/8 p-3">
             <label className="text-sm font-medium text-gray-200" htmlFor="delivery-customer-name">
-              Customer Name
+              {isAmharic ? "የደንበኛ ስም" : "Customer Name"}
             </label>
             <input
               id="delivery-customer-name"
               type="text"
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
-              placeholder="Enter customer name"
+              placeholder={isAmharic ? "የደንበኛ ስም ያስገቡ" : "Enter customer name"}
               className="app-bg-elevated mt-2 h-11 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100 outline-none placeholder:text-gray-500"
             />
 
             <label className="mt-3 block text-sm font-medium text-gray-200" htmlFor="delivery-customer-phone">
-              Customer Phone
+              {isAmharic ? "የደንበኛ ስልክ" : "Customer Phone"}
             </label>
             <input
               id="delivery-customer-phone"
               type="tel"
               value={customerPhone}
               onChange={(event) => setCustomerPhone(event.target.value)}
-              placeholder="Enter customer phone"
+              placeholder={isAmharic ? "የደንበኛ ስልክ ያስገቡ" : "Enter customer phone"}
               className="app-bg-elevated mt-2 h-11 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100 outline-none placeholder:text-gray-500"
             />
 
             <label className="text-sm font-medium text-gray-200" htmlFor="delivery-destination">
-              Destination
+              {isAmharic ? "መድረሻ" : "Destination"}
             </label>
             <input
               id="delivery-destination"
               type="text"
               value={destination}
               onChange={(event) => setDestination(event.target.value)}
-              placeholder="Enter destination address"
+              placeholder={isAmharic ? "የመድረሻ አድራሻ ያስገቡ" : "Enter destination address"}
               className="app-bg-elevated mt-2 h-11 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100 outline-none placeholder:text-gray-500"
             />
             <button
@@ -124,7 +127,7 @@ export default function OrdersPanel({
               disabled={isLocating}
               className="app-hover-accent-soft mt-3 rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLocating ? "Getting location..." : "Use my location"}
+              {isLocating ? (isAmharic ? "አካባቢ በመፈለግ ላይ..." : "Getting location...") : isAmharic ? "የእኔን አካባቢ ተጠቀም" : "Use my location"}
             </button>
             {locationError ? <p className="mt-2 text-xs text-red-300">{locationError}</p> : null}
           </div>
@@ -132,7 +135,7 @@ export default function OrdersPanel({
 
         <div className="mt-4 flex-1 min-h-0 space-y-5 overflow-y-auto pr-1">
           {orderItems.length === 0 ? (
-            <p className="pt-2 text-sm text-gray-400">No items yet. Select a dish to add it to your order.</p>
+            <p className="pt-2 text-sm text-gray-400">{isAmharic ? "እስካሁን ንጥል የለም። ወደ ትዕዛዝዎ ለመጨመር ምግብ ይምረጡ።" : "No items yet. Select a dish to add it to your order."}</p>
           ) : (
             orderItems.map((item) => (
               <OrderItemRow
@@ -160,7 +163,7 @@ export default function OrdersPanel({
             }}
             className="app-bg-accent mt-5 w-full rounded-xl px-6 py-4 text-center text-base font-semibold text-white shadow-[0_12px_30px_rgba(234,124,105,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Continue to Payment
+            {isAmharic ? "ወደ ክፍያ ቀጥል" : "Continue to Payment"}
           </button>
         </div>
       </aside>

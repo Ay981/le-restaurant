@@ -1,3 +1,7 @@
+"use client";
+
+import { useI18n } from "@/components/i18n/I18nProvider";
+
 type OrderTypeTabsProps = {
   orderTypes: string[];
   activeType: string;
@@ -5,6 +9,15 @@ type OrderTypeTabsProps = {
 };
 
 export default function OrderTypeTabs({ orderTypes, activeType, onChange }: OrderTypeTabsProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
+
+  const labelMap: Record<string, string> = {
+    "Dine In": "በሬስቶራንት",
+    "To Go": "ለመውሰድ",
+    Delivery: "ዴሊቨሪ",
+  };
+
   return (
     <div className="mt-5 flex flex-wrap gap-3">
       {orderTypes.map((type) => (
@@ -18,7 +31,7 @@ export default function OrderTypeTabs({ orderTypes, activeType, onChange }: Orde
               : "border-white/10 bg-transparent app-text-accent"
           }`}
         >
-          {type}
+          {isAmharic ? (labelMap[type] ?? type) : type}
         </button>
       ))}
     </div>

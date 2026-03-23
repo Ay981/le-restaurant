@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import { FiTrash2 } from "react-icons/fi";
 import { formatCurrency } from "@/lib/currency";
 import type { OrderItem } from "@/lib/data";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type OrderItemRowProps = {
   item: OrderItem;
@@ -18,6 +21,9 @@ export default function OrderItemRow({
   onDecrease,
   onIncrease,
 }: OrderItemRowProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
+
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -44,7 +50,7 @@ export default function OrderItemRow({
               type="button"
               onClick={onDecrease}
               className="h-10 w-8 text-lg text-gray-300 transition-colors hover:text-white"
-              aria-label={`Decrease quantity for ${item.title}`}
+              aria-label={isAmharic ? `${item.title} ብዛት ቀንስ` : `Decrease quantity for ${item.title}`}
             >
               -
             </button>
@@ -53,7 +59,7 @@ export default function OrderItemRow({
               type="button"
               onClick={onIncrease}
               className="h-10 w-8 text-lg text-gray-300 transition-colors hover:text-white"
-              aria-label={`Increase quantity for ${item.title}`}
+              aria-label={isAmharic ? `${item.title} ብዛት ጨምር` : `Increase quantity for ${item.title}`}
             >
               +
             </button>
@@ -68,7 +74,7 @@ export default function OrderItemRow({
         <input
           type="text"
           onChange={(event) => onNoteChange(event.target.value)}
-          placeholder="Order Note..."
+          placeholder={isAmharic ? "የትዕዛዝ ማስታወሻ..." : "Order Note..."}
           className="app-bg-elevated h-12 flex-1 rounded-lg border border-white/8 px-4 text-sm text-gray-300 outline-none"
         />
         <button

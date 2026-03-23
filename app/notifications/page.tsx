@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import Sidenav from "@/components/navigation/Sidenav";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type OrderNotification = {
   id: number;
@@ -25,6 +26,7 @@ function formatDateTime(isoValue: string) {
 }
 
 export default function NotificationsPage() {
+  const { translate } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
@@ -143,10 +145,10 @@ export default function NotificationsPage() {
           <Sidenav />
           <div className="flex-1 p-6">
             <div className="app-bg-panel max-w-3xl rounded-2xl border border-white/10 p-6">
-              <h1 className="text-2xl font-semibold">Order Notifications</h1>
-              <p className="mt-2 text-sm text-gray-300">Sign in to view live updates for your order statuses.</p>
+              <h1 className="text-2xl font-semibold">{translate("notifications", "pageTitle")}</h1>
+              <p className="mt-2 text-sm text-gray-300">{translate("notifications", "pageSubtitle")}</p>
               <Link href="/sign-in?next=/notifications" className="app-text-accent mt-3 inline-flex text-sm hover:underline">
-                Sign in
+                {translate("messages", "signIn")}
               </Link>
             </div>
           </div>
@@ -164,12 +166,12 @@ export default function NotificationsPage() {
           <section className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6 lg:p-7">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold md:text-3xl">Order Notifications</h1>
+                <h1 className="text-2xl font-semibold md:text-3xl">{translate("notifications", "pageTitle")}</h1>
                 <p className="mt-1 max-w-2xl text-sm text-gray-300 md:text-base">
-                  Keep track of progress from pending to delivered. Notifications are linked to your account orders.
+                  {translate("notifications", "pageSubtitle")}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -177,7 +179,7 @@ export default function NotificationsPage() {
                   }}
                   className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-2 text-xs text-gray-200"
                 >
-                  Refresh
+                  {translate("common", "refresh")}
                 </button>
                 <button
                   type="button"
@@ -187,22 +189,22 @@ export default function NotificationsPage() {
                   disabled={unreadCount === 0 || isMarkingRead}
                   className="app-bg-accent rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isMarkingRead ? "Updating..." : "Mark All Read"}
+                  {isMarkingRead ? translate("notifications", "updating") : translate("notifications", "markAllRead")}
                 </button>
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Total Notifications</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{translate("notifications", "totalNotifications")}</p>
                 <p className="mt-1 text-lg font-semibold text-white">{notifications.length}</p>
               </article>
               <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Unread</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{translate("notifications", "unread")}</p>
                 <p className="mt-1 text-lg font-semibold text-white">{unreadCount}</p>
               </article>
               <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Read</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{translate("notifications", "read")}</p>
                 <p className="mt-1 text-lg font-semibold text-white">{notifications.length - unreadCount}</p>
               </article>
             </div>
@@ -212,9 +214,9 @@ export default function NotificationsPage() {
           </section>
 
           <section className="app-bg-panel flex-1 rounded-2xl border border-white/10 p-5 md:p-6 lg:p-7">
-            <h2 className="text-lg font-semibold md:text-xl">Recent Updates</h2>
+            <h2 className="text-lg font-semibold md:text-xl">{translate("notifications", "recentUpdates")}</h2>
             {notifications.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-400">No notifications yet.</p>
+              <p className="mt-3 text-sm text-gray-400">{translate("notifications", "noNotifications")}</p>
             ) : (
               <div className="mt-4 space-y-3">
                 {notifications.map((item) => (
@@ -225,7 +227,7 @@ export default function NotificationsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-white md:text-base">{item.title}</p>
                       <span className={`rounded-full px-2.5 py-1 text-xs ${item.isRead ? "bg-gray-500/20 text-gray-300" : "bg-amber-500/20 text-amber-300"}`}>
-                        {item.isRead ? "Read" : "Unread"}
+                        {item.isRead ? translate("notifications", "read") : translate("notifications", "unread")}
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-gray-200">{item.message}</p>

@@ -7,6 +7,7 @@ import { FiDownload } from "react-icons/fi";
 import AnalyticsSkeleton from "../_components/skeletons/AnalyticsSkeleton";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type TimeRange = "today" | "7d" | "30d";
 
@@ -173,6 +174,8 @@ function getTrendStats(currentValue: number, previousValue: number): TrendStats 
 }
 
 export default function AdminAnalyticsPage() {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderAnalyticsRow[]>([]);
@@ -198,7 +201,13 @@ export default function AdminAnalyticsPage() {
       setOrders(MOCK_ORDERS);
       setDishes(fetchedDishes.length > 0 ? fetchedDishes : MOCK_DISHES);
       setErrorMessage(
-        ordersError || dishesError ? "Live analytics failed to load. Showing sample data for testing." : "No live analytics found. Showing sample data for testing.",
+        ordersError || dishesError
+          ? isAmharic
+            ? "የቀጥታ ትንታኔ መጫን አልተቻለም። ለሙከራ ናሙና ውሂብ ታይቷል።"
+            : "Live analytics failed to load. Showing sample data for testing."
+          : isAmharic
+            ? "ምንም የቀጥታ ትንታኔ አልተገኘም። ለሙከራ ናሙና ውሂብ ታይቷል።"
+            : "No live analytics found. Showing sample data for testing.",
       );
       setIsLoading(false);
       return;
@@ -208,7 +217,7 @@ export default function AdminAnalyticsPage() {
     setDishes(fetchedDishes);
     setErrorMessage(null);
     setIsLoading(false);
-  }, []);
+  }, [isAmharic]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -352,8 +361,8 @@ export default function AdminAnalyticsPage() {
     <section className="space-y-4 text-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Restaurant Sales Reports</h1>
-          <p className="mt-1 text-sm text-gray-300">Analytics dashboard for orders, revenue, and customer activity.</p>
+          <h1 className="text-2xl font-semibold text-white">{isAmharic ? "የሬስቶራንት ሽያጭ ሪፖርቶች" : "Restaurant Sales Reports"}</h1>
+          <p className="mt-1 text-sm text-gray-300">{isAmharic ? "ለትዕዛዞች፣ ገቢ እና የደንበኛ እንቅስቃሴ የትንታኔ ዳሽቦርድ።" : "Analytics dashboard for orders, revenue, and customer activity."}</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -364,7 +373,7 @@ export default function AdminAnalyticsPage() {
           >
             {TIME_RANGE_OPTIONS.map((option) => (
               <option key={option.key} value={option.key} className="bg-slate-900 text-white">
-                {option.label}
+                {isAmharic ? option.key === "today" ? "ዛሬ" : option.key === "7d" ? "7 ቀናት" : "30 ቀናት" : option.label}
               </option>
             ))}
           </select>
@@ -374,19 +383,19 @@ export default function AdminAnalyticsPage() {
             className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100"
           >
             <FiDownload />
-            Save Report
+            {isAmharic ? "ሪፖርት አስቀምጥ" : "Save Report"}
           </button>
         </div>
       </header>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
         <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
-          <h2 className="text-base font-semibold text-gray-100">Order Distribution</h2>
+          <h2 className="text-base font-semibold text-gray-100">{isAmharic ? "የትዕዛዝ ስርጭት" : "Order Distribution"}</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {[
-              { label: "Delivered Orders", value: analytics.completionRate, color: "#f87171" },
-              { label: "Customer Growth", value: analytics.customerGrowth, color: "#34d399" },
-              { label: "Total Revenue", value: analytics.revenueIndex, color: "#60a5fa" },
+              { label: isAmharic ? "የደረሱ ትዕዛዞች" : "Delivered Orders", value: analytics.completionRate, color: "#f87171" },
+              { label: isAmharic ? "የደንበኛ እድገት" : "Customer Growth", value: analytics.customerGrowth, color: "#34d399" },
+              { label: isAmharic ? "ጠቅላላ ገቢ" : "Total Revenue", value: analytics.revenueIndex, color: "#60a5fa" },
             ].map((ring) => (
               <div key={ring.label} className="rounded-xl border border-white/10 p-3 text-center">
                 <div className="mx-auto h-24 w-24">
@@ -428,14 +437,14 @@ export default function AdminAnalyticsPage() {
 
         <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-100">Orders Trend</h2>
+            <h2 className="text-base font-semibold text-gray-100">{isAmharic ? "የትዕዛዞች አቅጣጫ" : "Orders Trend"}</h2>
             <button
               type="button"
               onClick={downloadReport}
               className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-100"
             >
               <FiDownload />
-              Save Report
+              {isAmharic ? "ሪፖርት አስቀምጥ" : "Save Report"}
             </button>
           </div>
 
@@ -446,7 +455,7 @@ export default function AdminAnalyticsPage() {
                 <YAxis hide />
                 <Tooltip
                   contentStyle={{ background: "#17192d", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10 }}
-                  formatter={(value) => [`${value} orders`, "Orders"]}
+                  formatter={(value) => [`${value} ${isAmharic ? "ትዕዛዞች" : "orders"}`, isAmharic ? "ትዕዛዞች" : "Orders"]}
                 />
                 <Line type="monotone" dataKey="orders" stroke="#60a5fa" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
@@ -456,22 +465,22 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <article className="app-bg-panel rounded-2xl border border-white/10 p-4">
-        <h2 className="text-base font-semibold text-gray-100">Most Sold Foods</h2>
+        <h2 className="text-base font-semibold text-gray-100">{isAmharic ? "በጣም የተሸጡ ምግቦች" : "Most Sold Foods"}</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-180 text-left">
             <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-gray-400">
               <tr>
-                <th className="px-3 py-2">Food</th>
-                <th className="px-3 py-2">Sold Qty</th>
-                <th className="px-3 py-2">Popularity</th>
-                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">{isAmharic ? "ምግብ" : "Food"}</th>
+                <th className="px-3 py-2">{isAmharic ? "የተሸጠ ብዛት" : "Sold Qty"}</th>
+                <th className="px-3 py-2">{isAmharic ? "ተወዳጅነት" : "Popularity"}</th>
+                <th className="px-3 py-2">{isAmharic ? "ሁኔታ" : "Status"}</th>
               </tr>
             </thead>
             <tbody>
               {analytics.mostOrdered.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-3 py-4 text-sm text-gray-400">
-                    No data available for this range.
+                    {isAmharic ? "ለዚህ ጊዜ ክልል ውሂብ የለም።" : "No data available for this range."}
                   </td>
                 </tr>
               ) : (
@@ -491,7 +500,7 @@ export default function AdminAnalyticsPage() {
                     </td>
                     <td className="px-3 py-3">
                       <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300">
-                        {food.popularity >= 25 ? "Hot" : food.popularity >= 12 ? "Rising" : "Steady"}
+                        {food.popularity >= 25 ? (isAmharic ? "በጣም ተፈላጊ" : "Hot") : food.popularity >= 12 ? (isAmharic ? "እየጨመረ" : "Rising") : isAmharic ? "የተረጋጋ" : "Steady"}
                       </span>
                     </td>
                   </tr>
@@ -503,48 +512,48 @@ export default function AdminAnalyticsPage() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-white/10 p-3">
-            <p className="text-xs text-gray-400">Meals Sold</p>
+            <p className="text-xs text-gray-400">{isAmharic ? "የተሸጡ ምግቦች" : "Meals Sold"}</p>
             <p className="mt-1 text-3xl font-semibold text-white">{analytics.soldMeals.toLocaleString()}</p>
             <p className={`mt-1 text-xs ${analytics.trends.orders.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
               {analytics.trends.orders.isPositive ? "+" : ""}
-              {analytics.trends.orders.percent}% vs previous period
+              {analytics.trends.orders.percent}% {isAmharic ? "ከቀድሞ ጊዜ ጋር ንጽጽር" : "vs previous period"}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 p-3">
-            <p className="text-xs text-gray-400">Total Profit</p>
+            <p className="text-xs text-gray-400">{isAmharic ? "ጠቅላላ ትርፍ" : "Total Profit"}</p>
             <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.totalRevenue)}</p>
             <p className={`mt-1 text-xs ${analytics.trends.revenue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
               {analytics.trends.revenue.isPositive ? "+" : ""}
-              {analytics.trends.revenue.percent}% vs previous period
+              {analytics.trends.revenue.percent}% {isAmharic ? "ከቀድሞ ጊዜ ጋር ንጽጽር" : "vs previous period"}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 p-3">
-            <p className="text-xs text-gray-400">Delivered Revenue</p>
+            <p className="text-xs text-gray-400">{isAmharic ? "የተደረሰ ገቢ" : "Delivered Revenue"}</p>
             <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.deliveredRevenue)}</p>
             <p className={`mt-1 text-xs ${analytics.trends.deliveredRevenue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
               {analytics.trends.deliveredRevenue.isPositive ? "+" : ""}
-              {analytics.trends.deliveredRevenue.percent}% vs previous period
+              {analytics.trends.deliveredRevenue.percent}% {isAmharic ? "ከቀድሞ ጊዜ ጋር ንጽጽር" : "vs previous period"}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 p-3">
-            <p className="text-xs text-gray-400">Avg Order Value</p>
+            <p className="text-xs text-gray-400">{isAmharic ? "አማካይ የትዕዛዝ ዋጋ" : "Avg Order Value"}</p>
             <p className="mt-1 text-3xl font-semibold text-white">{formatCurrency(analytics.avgOrderValue)}</p>
             <p className={`mt-1 text-xs ${analytics.trends.avgOrderValue.isPositive ? "text-emerald-300" : "text-rose-300"}`}>
               {analytics.trends.avgOrderValue.isPositive ? "+" : ""}
-              {analytics.trends.avgOrderValue.percent}% vs previous period
+              {analytics.trends.avgOrderValue.percent}% {isAmharic ? "ከቀድሞ ጊዜ ጋር ንጽጽር" : "vs previous period"}
             </p>
           </div>
         </div>
 
         <div className="mt-4 rounded-2xl border border-white/10 p-4 xl:max-w-3xl">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-200">Delivery vs Pending Trend</h3>
+            <h3 className="text-sm font-semibold text-gray-200">{isAmharic ? "ዴሊቨሪ ከመጠባበቅ ጋር አቅጣጫ" : "Delivery vs Pending Trend"}</h3>
             <div className="flex items-center gap-3 text-xs text-gray-300">
               <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-300" /> Delivered
+                <span className="h-2 w-2 rounded-full bg-emerald-300" /> {isAmharic ? "ተሰጥቷል" : "Delivered"}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-rose-300" /> Pending
+                <span className="h-2 w-2 rounded-full bg-rose-300" /> {isAmharic ? "በመጠባበቅ ላይ" : "Pending"}
               </span>
             </div>
           </div>

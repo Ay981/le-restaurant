@@ -1,12 +1,18 @@
+"use client";
+
 import Image from "next/image";
 import { formatCurrency } from "@/lib/currency";
 import { orderItems, orderSummary } from "@/lib/data";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 export function ConfirmationPanel() {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
+
   return (
     <section className="border-b border-white/10 p-5 xl:border-b-0 xl:border-r xl:border-white/10 xl:p-6">
-      <h2 className="text-2xl font-semibold">Confirmation</h2>
-      <p className="mt-1 text-sm text-gray-400">Orders {orderSummary.orderNumber}</p>
+      <h2 className="text-2xl font-semibold">{isAmharic ? "ማረጋገጫ" : "Confirmation"}</h2>
+      <p className="mt-1 text-sm text-gray-400">{isAmharic ? "ትዕዛዝ" : "Orders"} {orderSummary.orderNumber}</p>
 
       <div className="mt-6 space-y-4">
         {orderItems.map((item) => (
@@ -39,11 +45,11 @@ export function ConfirmationPanel() {
 
       <div className="mt-6 border-t border-white/10 pt-4 text-sm text-gray-300">
         <div className="flex items-center justify-between">
-          <span>Discount</span>
+          <span>{isAmharic ? "ቅናሽ" : "Discount"}</span>
           <span>{formatCurrency(orderSummary.discount)}</span>
         </div>
         <div className="mt-3 flex items-center justify-between text-base text-gray-100">
-          <span>Sub total</span>
+          <span>{isAmharic ? "ንዑስ ጠቅላላ" : "Sub total"}</span>
           <span>{formatCurrency(orderSummary.subtotal)}</span>
         </div>
       </div>

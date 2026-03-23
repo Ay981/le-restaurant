@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import Sidenav from "@/components/navigation/Sidenav";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type OrderOption = {
   id: string;
@@ -32,6 +33,7 @@ function formatDateTime(isoValue: string) {
 }
 
 export default function MessagesPage() {
+  const { translate } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [orders, setOrders] = useState<OrderOption[]>([]);
@@ -184,10 +186,10 @@ export default function MessagesPage() {
           <Sidenav />
           <div className="flex-1 p-6">
             <div className="app-bg-panel max-w-3xl rounded-2xl border border-white/10 p-6">
-              <h1 className="text-2xl font-semibold">Contact Support</h1>
-              <p className="mt-2 text-sm text-gray-300">Sign in to send a message linked to your orders.</p>
+              <h1 className="text-2xl font-semibold">{translate("messages", "signInTitle")}</h1>
+              <p className="mt-2 text-sm text-gray-300">{translate("messages", "signInSubtitle")}</p>
               <Link href="/sign-in?next=/messages" className="app-text-accent mt-3 inline-flex text-sm hover:underline">
-                Sign in
+                {translate("messages", "signIn")}
               </Link>
             </div>
           </div>
@@ -205,14 +207,16 @@ export default function MessagesPage() {
           <section className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6 lg:p-7">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold md:text-3xl">Contact Support</h1>
+                <h1 className="text-2xl font-semibold md:text-3xl">{translate("messages", "pageTitle")}</h1>
                 <p className="mt-1 max-w-2xl text-sm text-gray-300 md:text-base">
-                  Send a message related to your order. The support team can see your order context and reply with updates.
+                  {translate("messages", "pageSubtitle")}
                 </p>
               </div>
-              <Link href="/contact-us" className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200">
-                Contact Info
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/contact-us" className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200">
+                  {translate("common", "navContact")}
+                </Link>
+              </div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -236,7 +240,7 @@ export default function MessagesPage() {
                 onChange={(event) => setSelectedOrderId(event.target.value)}
                 className="app-bg-elevated h-11 rounded-xl border border-white/10 px-3 text-sm text-gray-100 outline-none"
               >
-                <option value="">Select order</option>
+                <option value="">{translate("messages", "selectOrder")}</option>
                 {orders.map((order) => (
                   <option key={order.id} value={order.id}>
                     {order.orderNumber}
@@ -261,7 +265,7 @@ export default function MessagesPage() {
                 disabled={isSubmitting}
                 className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Sending..." : "Send"}
+                {isSubmitting ? translate("messages", "sending") : translate("messages", "send")}
               </button>
             </div>
 
@@ -281,11 +285,11 @@ export default function MessagesPage() {
                 }}
                 className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200"
               >
-                Refresh
+                {translate("common", "refresh")}
               </button>
             </div>
             {sortedMessages.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-400">No messages yet.</p>
+              <p className="mt-3 text-sm text-gray-400">{translate("messages", "noMessages")}</p>
             ) : (
               <div className="mt-4 space-y-3">
                 {sortedMessages.map((item) => (
@@ -293,7 +297,7 @@ export default function MessagesPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-white md:text-base">{item.orderNumber}</p>
                       <span className={`rounded-full px-2.5 py-1 text-xs ${item.status === "resolved" ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`}>
-                        {item.status === "resolved" ? "Resolved" : "Open"}
+                        {item.status === "resolved" ? translate("messages", "resolved") : translate("messages", "open")}
                       </span>
                     </div>
                     <p className="mt-3 text-sm leading-relaxed text-gray-200">{item.message}</p>

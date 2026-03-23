@@ -6,6 +6,7 @@ import type { Category, Dish } from "@/lib/data";
 import Header from "./Header";
 import AuthenticatedInsights from "./AuthenticatedInsights";
 import RecommendationChat from "./RecommendationChat";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type MenuSectionProps = {
   restaurantName: string;
@@ -39,6 +40,8 @@ export default function MenuSection({
   onAddDish,
   selectedOrderType,
 }: MenuSectionProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [activeCategory, setActiveCategory] = useState<MenuFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -46,6 +49,7 @@ export default function MenuSection({
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  const allLabel = isAmharic ? "ሁሉም" : "All";
   const categoryOptions: readonly MenuFilter[] = ["All", ...categories];
 
   useEffect(() => {
@@ -139,7 +143,7 @@ export default function MenuSection({
                 : "text-gray-300 hover:text-white"
             }`}
           >
-            {category}
+            {category === "All" ? allLabel : category}
             {activeCategory === category && (
               <span className="app-bg-accent absolute inset-x-0 -bottom-4 h-1 rounded-full" />
             )}
@@ -148,7 +152,7 @@ export default function MenuSection({
       </div>
 
       <div className="mt-5 flex items-center justify-between md:mt-6">
-        <h2 className="text-3xl font-semibold text-white md:text-4xl">Choose Dishes</h2>
+        <h2 className="text-3xl font-semibold text-white md:text-4xl">{isAmharic ? "ምግቦችን ይምረጡ" : "Choose Dishes"}</h2>
         <button
           type="button"
           className="app-bg-panel rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-200"
@@ -175,8 +179,12 @@ export default function MenuSection({
         {filteredDishes.length === 0 && (
           <p className="text-base text-gray-400">
             {debouncedSearchQuery
-              ? "No dishes match your search."
-              : "No dishes found for this category."}
+              ? isAmharic
+                ? "ፍለጋዎን የሚዛመዱ ምግቦች አልተገኙም።"
+                : "No dishes match your search."
+              : isAmharic
+                ? "ለዚህ ምድብ ምግቦች አልተገኙም።"
+                : "No dishes found for this category."}
           </p>
         )}
       </div>

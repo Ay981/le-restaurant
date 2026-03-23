@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type PreviousOrder = {
   orderNumber: string;
@@ -20,26 +21,28 @@ type OrderWithItems = {
   }> | null;
 };
 
-function formatShortDate(value: string) {
+function formatShortDate(value: string, locale: "en" | "am") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
+    return locale === "am" ? "ያልታወቀ ቀን" : "Unknown date";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale === "am" ? "am-ET" : "en-US", {
     month: "short",
     day: "numeric",
   }).format(date);
 }
 
-function formatStatusLabel(status: string) {
-  if (status === "preparing") return "In Progress";
-  if (status === "completed" || status === "served") return "Delivered";
-  if (status === "pending") return "Pending";
+function formatStatusLabel(status: string, locale: "en" | "am") {
+  if (status === "preparing") return locale === "am" ? "በሂደት ላይ" : "In Progress";
+  if (status === "completed" || status === "served") return locale === "am" ? "ተሰጥቷል" : "Delivered";
+  if (status === "pending") return locale === "am" ? "በመጠባበቅ ላይ" : "Pending";
   return status;
 }
 
 export default function AuthenticatedInsights() {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [previousOrders, setPreviousOrders] = useState<PreviousOrder[]>([]);
@@ -137,10 +140,10 @@ export default function AuthenticatedInsights() {
   if (!isAuthenticated) {
     return (
       <div className="mt-6 rounded-2xl border border-white/10 p-4 text-sm text-gray-300">
-        Sign in to unlock order history and personalized dish suggestions.
+        {isAmharic ? "የትዕዛዝ ታሪክና የግል ምግብ ምክሮችን ለማግኘት ይግቡ።" : "Sign in to unlock order history and personalized dish suggestions."}
         <div className="mt-2">
           <Link href="/sign-in?next=/menu" className="app-text-accent hover:underline">
-            Sign in
+            {isAmharic ? "ግባ" : "Sign in"}
           </Link>
         </div>
       </div>
@@ -150,32 +153,34 @@ export default function AuthenticatedInsights() {
   if (isEmptyInsights) {
     return (
       <div className="mt-6 rounded-2xl border border-white/10 p-4 text-sm text-gray-300">
-        Your account is ready. Place your first order to start getting personalized suggestions.
+        {isAmharic
+          ? "መለያዎ ዝግጁ ነው። የግል ምክሮችን ለመቀበል የመጀመሪያ ትዕዛዝዎን ያስገቡ።"
+          : "Your account is ready. Place your first order to start getting personalized suggestions."}
       </div>
     );
   }
 
   return (
     <div className="mt-6 rounded-2xl border border-white/10 p-4">
-      <h3 className="text-sm font-semibold text-white">For You</h3>
+      <h3 className="text-sm font-semibold text-white">{isAmharic ? "ለእርስዎ" : "For You"}</h3>
 
       {previousOrders.length > 0 ? (
         <div className="mt-3">
-          <p className="text-xs uppercase tracking-wide text-gray-400">Previous Orders</p>
+          <p className="text-xs uppercase tracking-wide text-gray-400">{isAmharic ? "ያለፉ ትዕዛዞች" : "Previous Orders"}</p>
           <ul className="mt-2 space-y-1 text-sm text-gray-200">
             {previousOrders.map((order) => (
               <li key={`${order.orderNumber}-${order.createdAt}`} className="flex items-center justify-between">
                 <div>
                   <span>{order.orderNumber}</span>
-                  <span className="ml-2 text-xs text-gray-400">{formatStatusLabel(order.status)}</span>
+                  <span className="ml-2 text-xs text-gray-400">{formatStatusLabel(order.status, locale)}</span>
                 </div>
-                <span className="text-xs text-gray-400">{formatShortDate(order.createdAt)}</span>
+                <span className="text-xs text-gray-400">{formatShortDate(order.createdAt, locale)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-2">
             <Link href="/my-orders" className="app-text-accent text-xs hover:underline">
-              Track my orders
+              {isAmharic ? "ትዕዛዞቼን ከታተል" : "Track my orders"}
             </Link>
           </div>
         </div>
@@ -183,7 +188,7 @@ export default function AuthenticatedInsights() {
 
       {suggestions.length > 0 ? (
         <div className="mt-4">
-          <p className="text-xs uppercase tracking-wide text-gray-400">Suggested Based on Your Orders</p>
+          <p className="text-xs uppercase tracking-wide text-gray-400">{isAmharic ? "በትዕዛዞችዎ መሠረት የተመከሩ" : "Suggested Based on Your Orders"}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {suggestions.map((title) => (
               <span key={title} className="rounded-lg border border-white/15 px-2 py-1 text-xs text-gray-200">

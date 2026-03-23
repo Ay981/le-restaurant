@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dish } from "@/lib/data";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type RecommendationChatProps = {
   dishes: Dish[];
@@ -40,6 +41,8 @@ const initialAnswers: Answers = {
 };
 
 export default function RecommendationChat({ dishes, onAddDish }: RecommendationChatProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [isOpen, setIsOpen] = useState(false);
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [isLoading, setIsLoading] = useState(false);
@@ -210,7 +213,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       setSource(payload.source || "rule-based");
       setFallbackReason(payload.fallbackReason || "");
     } catch {
-      setErrorMessage("Unable to generate recommendations right now.");
+      setErrorMessage(isAmharic ? "በአሁኑ ጊዜ ምክሮችን ማመንጨት አልተቻለም።" : "Unable to generate recommendations right now.");
       setRecommendations([]);
       setSource("");
       setFallbackReason("");
@@ -224,8 +227,8 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       <div className="mt-6 rounded-2xl border border-white/10 app-bg-panel p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-white">Need help choosing?</h3>
-            <p className="mt-1 text-sm text-gray-400">Use the AI recommender to get a curated dish list in seconds.</p>
+            <h3 className="text-lg font-semibold text-white">{isAmharic ? "ለመምረጥ እገዛ ይፈልጋሉ?" : "Need help choosing?"}</h3>
+            <p className="mt-1 text-sm text-gray-400">{isAmharic ? "የAI ምክር ስርዓቱን ተጠቅመው በጥቂት ሰከንዶች የተመረጡ ምግቦችን ያግኙ።" : "Use the AI recommender to get a curated dish list in seconds."}</p>
           </div>
 
           <button
@@ -233,7 +236,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
             className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white"
             onClick={() => setIsOpen(true)}
           >
-            Open Recommender
+            {isAmharic ? "ምክር መስጫ ክፈት" : "Open Recommender"}
           </button>
         </div>
       </div>
@@ -251,14 +254,14 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
               <div>
                 <h3 className="text-xl font-semibold text-white">AI Dish Recommender</h3>
-                <p className="mt-1 text-sm text-gray-400">Tell us your mood and preferences, we’ll suggest your best matches.</p>
+                <p className="mt-1 text-sm text-gray-400">{isAmharic ? "ፍላጎትዎንና ምርጫዎትን ያካፍሉ፣ ተስማሚ ምግቦችን እንጠቁማለን።" : "Tell us your mood and preferences, we’ll suggest your best matches."}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="app-hover-accent-soft rounded-xl border border-white/15 px-3 py-2 text-sm text-gray-200"
               >
-                Close
+                {isAmharic ? "ዝጋ" : "Close"}
               </button>
             </div>
 
@@ -266,14 +269,14 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
           {isAuthenticated ? (
             <div className="rounded-xl border border-white/10 app-bg-elevated p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-200">For You</p>
+                <p className="text-sm font-semibold text-gray-200">{isAmharic ? "ለእርስዎ" : "For You"}</p>
                 <button
                   type="button"
                   onClick={applyForYouMode}
                   disabled={!hasPersonalizedData || isLoadingPreferences}
                   className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Use my previous orders
+                  {isAmharic ? "ያለፉ ትዕዛዞቼን ተጠቀም" : "Use my previous orders"}
                 </button>
               </div>
               {hasPersonalizedData ? (
@@ -287,15 +290,19 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
               ) : (
                 <p className="mt-2 text-xs text-gray-400">
                   {isLoadingPreferences
-                    ? "Loading your preference history..."
-                    : "Place a few orders first to unlock personalized suggestions."}
+                    ? isAmharic
+                      ? "የምርጫ ታሪክዎ በመጫን ላይ..."
+                      : "Loading your preference history..."
+                    : isAmharic
+                      ? "የግል ምክሮችን ለማስከፈት መጀመሪያ ጥቂት ትዕዛዞችን ያስገቡ።"
+                      : "Place a few orders first to unlock personalized suggestions."}
                 </p>
               )}
             </div>
           ) : null}
 
           <label className="block text-sm text-gray-300">
-            What is your favorite recipe or dish?
+            {isAmharic ? "ተወዳጅ ምግብዎ ምንድን ነው?" : "What is your favorite recipe or dish?"}
             <input
               value={answers.favoriteRecipe}
               onChange={(event) =>
@@ -304,40 +311,45 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
                   favoriteRecipe: event.target.value,
                 }))
               }
-              placeholder="e.g. spicy noodles, grilled chicken, mushroom pasta"
+              placeholder={isAmharic ? "ለምሳሌ፡ ቅመም ኑድል፣ ጥብስ ዶሮ፣ እንጉዳይ ፓስታ" : "e.g. spicy noodles, grilled chicken, mushroom pasta"}
               className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100 outline-none placeholder:text-gray-500"
             />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <SelectField
-              label="Cuisine"
+              label={isAmharic ? "የምግብ አይነት" : "Cuisine"}
               value={answers.cuisine}
               options={isAuthenticated ? ["For You", "Any", "Noodle", "Pasta", "Soup", "Grill", "Rice"] : ["Any", "Noodle", "Pasta", "Soup", "Grill", "Rice"]}
+              locale={locale}
               onChange={(value) => setAnswers((prev) => ({ ...prev, cuisine: value }))}
             />
             <SelectField
-              label="Spice Level"
+              label={isAmharic ? "የቅመም ደረጃ" : "Spice Level"}
               value={answers.spiceLevel}
               options={isAuthenticated ? ["For You", "Mild", "Medium", "Spicy"] : ["Mild", "Medium", "Spicy"]}
+              locale={locale}
               onChange={(value) => setAnswers((prev) => ({ ...prev, spiceLevel: value }))}
             />
             <SelectField
-              label="Budget"
+              label={isAmharic ? "በጀት" : "Budget"}
               value={answers.budget}
               options={isAuthenticated ? ["For You", "Low", "Medium", "High"] : ["Low", "Medium", "High"]}
+              locale={locale}
               onChange={(value) => setAnswers((prev) => ({ ...prev, budget: value }))}
             />
             <SelectField
-              label="Dietary"
+              label={isAmharic ? "የአመጋገብ ምርጫ" : "Dietary"}
               value={answers.dietary}
               options={isAuthenticated ? ["For You", "No preference", "Vegetarian", "High-protein"] : ["No preference", "Vegetarian", "High-protein"]}
+              locale={locale}
               onChange={(value) => setAnswers((prev) => ({ ...prev, dietary: value }))}
             />
             <SelectField
-              label="Meal Type"
+              label={isAmharic ? "የምግብ ክፍል" : "Meal Type"}
               value={answers.mealType}
               options={isAuthenticated ? ["For You", "Light", "Filling"] : ["Light", "Filling"]}
+              locale={locale}
               onChange={(value) => setAnswers((prev) => ({ ...prev, mealType: value }))}
             />
           </div>
@@ -349,7 +361,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
               disabled={isLoading}
               className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? "Thinking..." : "Get recommendations"}
+              {isLoading ? (isAmharic ? "በማሰብ ላይ..." : "Thinking...") : isAmharic ? "ምክሮችን አግኝ" : "Get recommendations"}
             </button>
 
             <button
@@ -363,24 +375,24 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
               }}
               className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200"
             >
-              Reset
+              {isAmharic ? "ዳግም አስጀምር" : "Reset"}
             </button>
 
             {source ? (
               <span className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-gray-300">
-                Source: {source === "gemini" ? "Gemini AI" : "Fallback engine"}
+                {isAmharic ? "ምንጭ:" : "Source:"} {source === "gemini" ? "Gemini AI" : isAmharic ? "ተተኪ ስርዓት" : "Fallback engine"}
               </span>
             ) : null}
           </div>
 
           {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
           {!errorMessage && source === "rule-based" && fallbackReason ? (
-            <p className="text-xs text-amber-300">Fallback reason: {fallbackReason}</p>
+            <p className="text-xs text-amber-300">{isAmharic ? "የተተኪ ምክንያት:" : "Fallback reason:"} {fallbackReason}</p>
           ) : null}
 
           {recommendations.length > 0 ? (
             <div className="space-y-3 rounded-xl border border-white/10 app-bg-elevated p-3">
-              <p className="text-sm font-semibold text-gray-200">Recommended for you</p>
+              <p className="text-sm font-semibold text-gray-200">{isAmharic ? "ለእርስዎ የተመከሩ" : "Recommended for you"}</p>
 
               {recommendations.map((item, index) => {
                 const dish = byTitle.get(item.title);
@@ -404,7 +416,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
                       }}
                       className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Add to order
+                      {isAmharic ? "ወደ ትዕዛዝ ጨምር" : "Add to order"}
                     </button>
                   </div>
                 );
@@ -423,10 +435,31 @@ type SelectFieldProps = {
   label: string;
   value: string;
   options: string[];
+  locale: "en" | "am";
   onChange: (value: string) => void;
 };
 
-function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+function SelectField({ label, value, options, locale, onChange }: SelectFieldProps) {
+  const labelMap: Record<string, string> = {
+    "For You": "ለእርስዎ",
+    Any: "ማንኛውም",
+    Noodle: "ኑድል",
+    Pasta: "ፓስታ",
+    Soup: "ሾርባ",
+    Grill: "ግሪል",
+    Rice: "ሩዝ",
+    Mild: "ቀላል",
+    Medium: "መካከለኛ",
+    Spicy: "ቅመም ያለው",
+    Low: "ዝቅተኛ",
+    High: "ከፍተኛ",
+    "No preference": "ምንም ምርጫ የለም",
+    Vegetarian: "ቬጀቴሪያን",
+    "High-protein": "ከፍተኛ ፕሮቲን",
+    Light: "ቀላል",
+    Filling: "ሙሉ የሚያደርግ",
+  };
+
   return (
     <label className="block text-sm text-gray-300">
       {label}
@@ -437,7 +470,7 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {locale === "am" ? (labelMap[option] ?? option) : option}
           </option>
         ))}
       </select>

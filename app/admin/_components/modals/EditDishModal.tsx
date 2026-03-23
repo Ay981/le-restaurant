@@ -1,4 +1,7 @@
+"use client";
+
 import { useEffect, useId, useRef, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import type { CategoryRecord, EditableDish } from "../types";
 
 type EditDishModalProps = {
@@ -26,6 +29,8 @@ export default function EditDishModal({
   onDraftChange,
   onImageFileChange,
 }: EditDishModalProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const titleInputRef = useRef<HTMLInputElement>(null);
   const titleInputId = useId();
   const priceInputId = useId();
@@ -123,17 +128,17 @@ export default function EditDishModal({
         <div className="app-bg-elevated flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <h3 id={headingId} className="text-2xl font-semibold text-white">
-              Edit Dish
+              {isAmharic ? "ምግብ አርትዕ" : "Edit Dish"}
             </h3>
             <p id={descriptionId} className="mt-1 text-sm text-gray-400">
-              Refine details, availability and image.
+              {isAmharic ? "ዝርዝሮችን፣ ተገኝነትን እና ምስልን አዘምን።" : "Refine details, availability and image."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            aria-label="Close edit dish modal"
+            aria-label={isAmharic ? "የምግብ አርትዖት ሞዳልን ዝጋ" : "Close edit dish modal"}
             className="rounded-xl border border-white/15 px-3 py-2 text-sm text-gray-200 transition hover:border-white/30"
           >
             ✕
@@ -155,7 +160,7 @@ export default function EditDishModal({
             />
             {shouldShowTitleError ? (
               <span id={`${titleInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                Dish title is required.
+                {isAmharic ? "የምግብ ርዕስ ያስፈልጋል።" : "Dish title is required."}
               </span>
             ) : null}
             <input
@@ -173,7 +178,7 @@ export default function EditDishModal({
             />
             {shouldShowPriceError ? (
               <span id={`${priceInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                Price must be 0 or greater.
+                {isAmharic ? "ዋጋ 0 ወይም ከዚያ በላይ መሆን አለበት።" : "Price must be 0 or greater."}
               </span>
             ) : null}
             <input
@@ -191,7 +196,7 @@ export default function EditDishModal({
             />
             {shouldShowAvailabilityError ? (
               <span id={`${availabilityInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                Availability must be a whole number 0 or greater.
+                {isAmharic ? "ተገኝነት 0 ወይም ከዚያ በላይ ሙሉ ቁጥር መሆን አለበት።" : "Availability must be a whole number 0 or greater."}
               </span>
             ) : null}
             <select
@@ -200,7 +205,7 @@ export default function EditDishModal({
               onChange={(event) => onDraftChange((current) => ({ ...current, categoryId: event.target.value }))}
               className="app-bg-elevated h-11 rounded-xl border border-white/10 px-3 text-sm text-gray-100"
             >
-              <option value="">No category</option>
+              <option value="">{isAmharic ? "ምድብ የለም" : "No category"}</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -212,13 +217,13 @@ export default function EditDishModal({
               value={draft.imageUrl}
               onChange={(event) => onDraftChange((current) => ({ ...current, imageUrl: event.target.value }))}
               className="app-bg-elevated h-11 rounded-xl border border-white/10 px-3 text-sm text-gray-100 md:col-span-2"
-              placeholder="Image URL fallback (optional)"
+              placeholder={isAmharic ? "የምስል URL አማራጭ (አማራጭ)" : "Image URL fallback (optional)"}
             />
             <label
               htmlFor={imageInputId}
               className="app-bg-main cursor-pointer rounded-xl border border-dashed border-white/25 px-3 py-3 text-center text-sm text-gray-300 md:col-span-2 hover:border-white/40"
             >
-              {selectedFileName ? `Selected: ${selectedFileName}` : "Upload replacement image"}
+              {selectedFileName ? `${isAmharic ? "የተመረጠ:" : "Selected:"} ${selectedFileName}` : isAmharic ? "ተተኪ ምስል ይጫኑ" : "Upload replacement image"}
               <input
                 id={imageInputId}
                 type="file"
@@ -233,16 +238,16 @@ export default function EditDishModal({
                 checked={draft.isActive}
                 onChange={(event) => onDraftChange((current) => ({ ...current, isActive: event.target.checked }))}
               />
-              Active dish
+              {isAmharic ? "ንቁ ምግብ" : "Active dish"}
             </label>
           </div>
 
           <div className="app-bg-main rounded-2xl border border-white/10 p-3">
-            <p className="text-xs uppercase tracking-wide text-gray-400">Preview</p>
+            <p className="text-xs uppercase tracking-wide text-gray-400">{isAmharic ? "ቅድመ እይታ" : "Preview"}</p>
             <div className="mt-3 h-56 overflow-hidden rounded-xl border border-white/10">
               <div className="h-full w-full bg-cover bg-center" style={{ backgroundImage: `url(${imagePreview})` }} />
             </div>
-            <p className="mt-2 text-xs text-gray-400">{selectedFileName ? `Selected: ${selectedFileName}` : "No replacement file selected"}</p>
+            <p className="mt-2 text-xs text-gray-400">{selectedFileName ? `${isAmharic ? "የተመረጠ:" : "Selected:"} ${selectedFileName}` : isAmharic ? "ምንም ተተኪ ፋይል አልተመረጠም" : "No replacement file selected"}</p>
           </div>
         </div>
 
@@ -253,14 +258,14 @@ export default function EditDishModal({
             disabled={isSaving}
             className="app-bg-elevated rounded-xl px-4 py-2 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Cancel
+              {isAmharic ? "ሰርዝ" : "Cancel"}
           </button>
           <button
             type="submit"
             disabled={isSaving || !isFormValid}
             className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Saving..." : "Save Dish"}
+              {isSaving ? (isAmharic ? "በማስቀመጥ ላይ..." : "Saving...") : isAmharic ? "ምግብ አስቀምጥ" : "Save Dish"}
           </button>
         </div>
       </form>

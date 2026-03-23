@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AdminSideRail } from "./_components/layout";
 import AdminShellSkeleton from "./_components/skeletons/AdminShellSkeleton";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -14,6 +15,8 @@ type AdminLayoutProps = {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       if (profileError) {
         setHasAccess(false);
-        setErrorMessage("Unable to verify role for this section.");
+        setErrorMessage(isAmharic ? "ለዚህ ክፍል የሚገባውን ሚና ማረጋገጥ አልተቻለም።" : "Unable to verify role for this section.");
         setIsCheckingAccess(false);
         return;
       }
@@ -50,7 +53,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       if (!isAdmin && !isStaff) {
         setHasAccess(false);
-        setErrorMessage("Admin or staff access is required for this section.");
+        setErrorMessage(isAmharic ? "ለዚህ ክፍል የአስተዳዳሪ ወይም የሰራተኛ ፍቃድ ያስፈልጋል።" : "Admin or staff access is required for this section.");
         setIsCheckingAccess(false);
         return;
       }
@@ -66,7 +69,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     };
 
     void validateAccess();
-  }, [pathname, router]);
+  }, [isAmharic, pathname, router]);
 
   if (isCheckingAccess) {
     return <AdminShellSkeleton />;
@@ -76,12 +79,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return (
       <main className="app-bg-main min-h-screen px-4 py-6 text-white md:px-8 md:py-8">
         <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 p-6">
-          <h1 className="text-2xl font-semibold">Admin Access Required</h1>
-          <p className="mt-2 text-sm text-gray-300">Only admin and staff accounts can access this section.</p>
+          <h1 className="text-2xl font-semibold">{isAmharic ? "የአስተዳዳሪ ፍቃድ ያስፈልጋል" : "Admin Access Required"}</h1>
+          <p className="mt-2 text-sm text-gray-300">{isAmharic ? "ይህን ክፍል የሚያገኙት አስተዳዳሪ እና ሰራተኛ መለያዎች ብቻ ናቸው።" : "Only admin and staff accounts can access this section."}</p>
           {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}
           <div className="mt-4">
             <Link href="/menu" className="app-text-accent hover:underline">
-              Back to dashboard
+              {isAmharic ? "ወደ ዳሽቦርድ ተመለስ" : "Back to dashboard"}
             </Link>
           </div>
         </div>

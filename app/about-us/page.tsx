@@ -1,21 +1,24 @@
 import Link from "next/link";
+import { t } from "@/lib/i18n/messages";
+import { getServerLocale } from "@/lib/i18n/server";
 
-const highlights = [
-  {
-    title: "Restaurant Type",
-    description: "Modern casual dining focused on Mediterranean and grill-inspired comfort dishes.",
-  },
-  {
-    title: "Main Location",
-    description: "Downtown Main Street, easy access for dine-in, takeaway pickup, and delivery dispatch.",
-  },
-  {
-    title: "Serving Schedule",
-    description: "Open daily for lunch and dinner with late-night service on weekends.",
-  },
-];
+export default async function AboutUsPage() {
+  const locale = await getServerLocale();
+  const highlights = [
+    {
+      title: t(locale, "about", "highlightTypeTitle"),
+      description: t(locale, "about", "highlightTypeDesc"),
+    },
+    {
+      title: t(locale, "about", "highlightLocationTitle"),
+      description: t(locale, "about", "highlightLocationDesc"),
+    },
+    {
+      title: t(locale, "about", "highlightScheduleTitle"),
+      description: t(locale, "about", "highlightScheduleDesc"),
+    },
+  ];
 
-export default function AboutUsPage() {
   return (
     <main className="app-bg-main min-h-screen text-white">
       <section className="flex min-h-screen w-full flex-col px-3 py-3 md:px-5 md:py-5 lg:px-6">
@@ -23,20 +26,22 @@ export default function AboutUsPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="app-bg-logo flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-sm font-bold app-text-accent">
-                FR
+                {t(locale, "common", "brandShort")}
               </div>
-              <p className="text-lg font-semibold tracking-wide">FLAVOURS</p>
+              <p className="text-lg font-semibold tracking-wide">{t(locale, "common", "brandName")}</p>
             </div>
 
             <nav className="hidden items-center gap-8 text-sm text-gray-300 md:flex">
-              <Link className="hover:text-white" href="/">Home</Link>
-              <Link className="app-text-accent" href="/about-us">About Us</Link>
-              <Link className="hover:text-white" href="/products">Products</Link>
+              <Link className="hover:text-white" href="/">{t(locale, "common", "navHome")}</Link>
+              <Link className="app-text-accent" href="/about-us">{t(locale, "common", "navAbout")}</Link>
+              <Link className="hover:text-white" href="/products">{t(locale, "common", "navProducts")}</Link>
             </nav>
 
-            <Link href="/menu" className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white">
-              Order Now
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/menu" className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white">
+                {t(locale, "common", "orderNow")}
+              </Link>
+            </div>
           </div>
         </header>
 
@@ -47,21 +52,13 @@ export default function AboutUsPage() {
           <div className="relative z-10 grid w-full gap-6 lg:grid-cols-[1.3fr_1fr]">
             <div>
               <p className="inline-flex rounded-full border border-white/15 px-3 py-1 text-xs font-semibold tracking-wide app-text-accent">
-                ABOUT FLAVOURS
+                {t(locale, "about", "badge")}
               </p>
               <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl xl:text-6xl">
-                A Restaurant Built
-                <br />
-                Around Great Food,
-                <br />
-                Consistent Service,
-                <br />
-                and Local Community
+                {t(locale, "about", "title")}
               </h1>
               <p className="mt-5 max-w-2xl text-sm text-gray-300 md:text-base">
-                Flavours is a neighborhood restaurant designed for everyday dining. We focus on grilled favorites,
-                fresh bowls, and signature plates prepared to order, with quick service for lunch traffic and a warm
-                dine-in experience for evening guests.
+                {t(locale, "about", "subtitle")}
               </p>
 
               <div className="mt-7 grid gap-4 md:grid-cols-3">
@@ -74,15 +71,15 @@ export default function AboutUsPage() {
               </div>
 
               <div className="mt-6 rounded-2xl border border-white/10 app-bg-elevated p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400">What We Focus On Daily</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "about", "focusDailyTitle")}</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-white/10 p-3">
-                    <p className="text-sm font-medium text-white">Quality consistency</p>
-                    <p className="mt-1 text-xs text-gray-300">Recipe standards and fresh prep timing across all meal periods.</p>
+                    <p className="text-sm font-medium text-white">{t(locale, "about", "focusQualityTitle")}</p>
+                    <p className="mt-1 text-xs text-gray-300">{t(locale, "about", "focusQualityDesc")}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 p-3">
-                    <p className="text-sm font-medium text-white">Service transparency</p>
-                    <p className="mt-1 text-xs text-gray-300">Clear handoff between kitchen, dispatch, and customer communication.</p>
+                    <p className="text-sm font-medium text-white">{t(locale, "about", "focusServiceTitle")}</p>
+                    <p className="mt-1 text-xs text-gray-300">{t(locale, "about", "focusServiceDesc")}</p>
                   </div>
                 </div>
               </div>
@@ -90,37 +87,36 @@ export default function AboutUsPage() {
 
             <div className="grid gap-4 self-start">
               <article className="app-bg-elevated rounded-2xl border border-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Our Story</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "about", "storyTitle")}</p>
                 <p className="mt-3 text-sm text-gray-200">
-                  Started as a small local kitchen in 2019, Flavours grew from a family-run concept into a full
-                  service spot known for balanced portions, quality ingredients, and reliable delivery.
+                  {t(locale, "about", "storyBody")}
                 </p>
               </article>
 
               <article className="app-bg-elevated rounded-2xl border border-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Service Information</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "about", "serviceInfoTitle")}</p>
                 <ul className="mt-3 space-y-2 text-sm text-gray-200">
-                  <li>• Monday - Thursday: 11:30 AM to 10:00 PM</li>
-                  <li>• Friday - Sunday: 11:30 AM to 12:00 AM</li>
-                  <li>• Dine-in, takeaway, and delivery available daily</li>
-                  <li>• Peak prep window: 12:30 PM - 2:00 PM and 7:00 PM - 9:30 PM</li>
+                  <li>{t(locale, "about", "serviceLine1")}</li>
+                  <li>{t(locale, "about", "serviceLine2")}</li>
+                  <li>{t(locale, "about", "serviceLine3")}</li>
+                  <li>{t(locale, "about", "serviceLine4")}</li>
                 </ul>
               </article>
 
               <article className="app-bg-elevated rounded-2xl border border-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Location & Contact</p>
-                <p className="mt-3 text-sm text-gray-200">Downtown Main Street, City Center</p>
-                <p className="mt-1 text-sm text-gray-300">Phone: +216 70 000 000</p>
-                <p className="mt-1 text-sm text-gray-300">Email: hello@flavours.com</p>
-                <p className="mt-1 text-sm text-gray-300">Reservations and group bookings available on request.</p>
+                <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "about", "locationTitle")}</p>
+                <p className="mt-3 text-sm text-gray-200">{t(locale, "about", "locationLine1")}</p>
+                <p className="mt-1 text-sm text-gray-300">{t(locale, "about", "locationLine2")}</p>
+                <p className="mt-1 text-sm text-gray-300">{t(locale, "about", "locationLine3")}</p>
+                <p className="mt-1 text-sm text-gray-300">{t(locale, "about", "locationLine4")}</p>
               </article>
 
               <div className="flex flex-wrap gap-3">
                 <Link href="/menu" className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white">
-                  Explore Menu
+                  {t(locale, "about", "exploreMenu")}
                 </Link>
                 <Link href="/messages" className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200">
-                  Send a Message
+                  {t(locale, "about", "sendMessage")}
                 </Link>
               </div>
             </div>

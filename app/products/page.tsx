@@ -2,8 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { dishes } from "@/lib/data";
 import { formatCurrency } from "@/lib/currency";
+import { t } from "@/lib/i18n/messages";
+import { getServerLocale } from "@/lib/i18n/server";
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const locale = await getServerLocale();
   const menuItems = dishes.slice(0, 8);
   const stats = [
     { label: "Featured Dishes", value: `${menuItems.length}` },
@@ -18,12 +21,14 @@ export default function ProductsPage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="app-text-accent text-xs font-semibold tracking-[0.2em] uppercase">Products</p>
-              <h1 className="mt-2 text-3xl font-semibold md:text-4xl lg:text-5xl">Signature dishes from our menu</h1>
-              <p className="mt-2 max-w-2xl text-sm text-gray-300 md:text-base">Browse popular choices, compare prices quickly, and continue to checkout in one flow.</p>
+              <h1 className="mt-2 text-3xl font-semibold md:text-4xl lg:text-5xl">{t(locale, "products", "title")}</h1>
+              <p className="mt-2 max-w-2xl text-sm text-gray-300 md:text-base">{t(locale, "products", "subtitle")}</p>
             </div>
-            <Link href="/menu" className="app-bg-accent rounded-xl px-5 py-2.5 text-sm font-semibold text-white">
-              Go to Full Menu
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/menu" className="app-bg-accent rounded-xl px-5 py-2.5 text-sm font-semibold text-white">
+                {t(locale, "products", "goToFullMenu")}
+              </Link>
+            </div>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">

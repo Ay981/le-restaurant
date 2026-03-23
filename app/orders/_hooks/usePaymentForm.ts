@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type PaymentMethod = "card" | "paypal" | "cash";
 type OrderType = "dine_in" | "to_go";
@@ -81,6 +82,8 @@ function isExpirationValid(value: string) {
 }
 
 export function usePaymentForm() {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [form, setForm] = useState<PaymentFormState>(INITIAL_FORM);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [verificationState, setVerificationState] = useState<VerificationState>({ verified: false });
@@ -93,28 +96,30 @@ export function usePaymentForm() {
 
     if (isCardPayment) {
       if (!form.cardholderName.trim()) {
-        errors.cardholderName = "Cardholder name is required.";
+        errors.cardholderName = isAmharic ? "የካርድ ባለቤት ስም ያስፈልጋል።" : "Cardholder name is required.";
       }
 
       if (form.cardNumber.replace(/\s/g, "").length !== 16) {
-        errors.cardNumber = "Card number must be 16 digits.";
+        errors.cardNumber = isAmharic ? "የካርድ ቁጥር 16 አሃዝ መሆን አለበት።" : "Card number must be 16 digits.";
       }
 
       if (!isExpirationValid(form.expirationDate)) {
-        errors.expirationDate = "Expiration must be a valid future month (MM/YY).";
+        errors.expirationDate = isAmharic
+          ? "የሚያበቃበት ቀን የሚመጣ ወር (MM/YY) መሆን አለበት።"
+          : "Expiration must be a valid future month (MM/YY).";
       }
 
       if (form.cvv.length < 3) {
-        errors.cvv = "CVV must be at least 3 digits.";
+        errors.cvv = isAmharic ? "CVV ቢያንስ 3 አሃዝ መሆን አለበት።" : "CVV must be at least 3 digits.";
       }
     }
 
     if (form.orderType === "dine_in" && !form.tableNo.trim()) {
-      errors.tableNo = "Table number is required for dine in orders.";
+      errors.tableNo = isAmharic ? "ለበሬስቶራንት ትዕዛዝ የጠረጴዛ ቁጥር ያስፈልጋል።" : "Table number is required for dine in orders.";
     }
 
     return errors;
-  }, [form, isCardPayment]);
+  }, [form, isAmharic, isCardPayment]);
 
   const hasFormErrors = Object.keys(fieldErrors).length > 0;
   const isPaymentReady = verificationState.verified && !hasFormErrors;
@@ -146,16 +151,16 @@ export function usePaymentForm() {
     });
 
     if (!verificationState.verified) {
-      setSubmitMessage("Verify a receipt before confirming payment.");
+      setSubmitMessage(isAmharic ? "ክፍያ ከማረጋገጥዎ በፊት ደረሰኝን ያረጋግጡ።" : "Verify a receipt before confirming payment.");
       return;
     }
 
     if (hasFormErrors) {
-      setSubmitMessage("Please correct the highlighted payment fields.");
+      setSubmitMessage(isAmharic ? "እባክዎ የተለዩትን የክፍያ መስኮች ያስተካክሉ።" : "Please correct the highlighted payment fields.");
       return;
     }
 
-    setSubmitMessage("Payment details look valid and are ready for confirmation.");
+    setSubmitMessage(isAmharic ? "የክፍያ ዝርዝሮች ትክክል ናቸው እና ለማረጋገጫ ዝግጁ ናቸው።" : "Payment details look valid and are ready for confirmation.");
   };
 
   return {

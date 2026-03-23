@@ -6,10 +6,13 @@ import { IoIosLogOut } from "react-icons/io";
 import { CiHome } from "react-icons/ci";
 import { FiEdit3, FiClipboard, FiMail, FiPieChart, FiSettings } from "react-icons/fi";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 export default function AdminSideRail() {
   const router = useRouter();
   const pathname = usePathname();
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
 
   const handleSignOut = async () => {
     const supabase = createBrowserSupabaseClient();
@@ -23,34 +26,34 @@ export default function AdminSideRail() {
         <div className="app-bg-logo rounded-xl p-3 text-xl text-[#ea7c69]">
           <FiPieChart />
         </div>
-        <Link href="/menu" className="rounded-xl p-3 text-xl text-[#ea7c69]" aria-label="Back to dashboard home">
+        <Link href="/menu" className="rounded-xl p-3 text-xl text-[#ea7c69]" aria-label={isAmharic ? "ወደ ዳሽቦርድ መነሻ ተመለስ" : "Back to dashboard home"}>
           <CiHome />
         </Link>
         <Link
           href="/admin"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-          aria-label="Open products management"
+          aria-label={isAmharic ? "የምርቶች አስተዳደርን ክፈት" : "Open products management"}
         >
           <FiEdit3 />
         </Link>
         <Link
           href="/admin/analytics"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin/analytics" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-          aria-label="Open analytics dashboard"
+          aria-label={isAmharic ? "የትንታኔ ዳሽቦርድን ክፈት" : "Open analytics dashboard"}
         >
           <FiPieChart />
         </Link>
         <Link
           href="/admin/orders"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin/orders" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-          aria-label="Open orders page"
+          aria-label={isAmharic ? "የትዕዛዞች ገጽን ክፈት" : "Open orders page"}
         >
           <FiClipboard />
         </Link>
         <Link
           href="/admin/messages"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin/messages" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-          aria-label="Open messages page"
+          aria-label={isAmharic ? "የመልእክቶች ገጽን ክፈት" : "Open messages page"}
         >
           <FiMail />
         </Link>
@@ -59,7 +62,7 @@ export default function AdminSideRail() {
         <Link
           href="/admin/settings"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin/settings" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-          aria-label="Open settings"
+          aria-label={isAmharic ? "ቅንብሮችን ክፈት" : "Open settings"}
         >
           <FiSettings />
         </Link>
@@ -69,7 +72,7 @@ export default function AdminSideRail() {
             void handleSignOut();
           }}
           className="rounded-xl p-3 text-xl text-[#ea7c69]"
-          aria-label="Sign out"
+          aria-label={isAmharic ? "ውጣ" : "Sign out"}
         >
           <IoIosLogOut />
         </button>

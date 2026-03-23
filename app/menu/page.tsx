@@ -9,6 +9,8 @@ import {
 } from "@/lib/data";
 import type { Dish } from "@/lib/data";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getServerLocale } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,47 @@ type DishRow = {
     | null;
 };
 
-async function getMenuData() {
+const categoryTranslations: Record<string, { en: string; am: string }> = {
+  "Hot Dishes": { en: "Hot Dishes", am: "ትኩስ ምግቦች" },
+  "Cold Dishes": { en: "Cold Dishes", am: "ቀዝቃዛ ምግቦች" },
+  Soup: { en: "Soup", am: "ሾርባ" },
+  Grill: { en: "Grill", am: "ግሪል" },
+  Appetizer: { en: "Appetizer", am: "መነሻ ምግብ" },
+  Dessert: { en: "Dessert", am: "ጣፋጭ" },
+};
+
+function translateCategory(name: string, locale: Locale) {
+  const translation = categoryTranslations[name];
+  if (!translation) {
+    return name;
+  }
+
+  return locale === "am" ? translation.am : translation.en;
+}
+
+function mapOrderTypes(locale: Locale): string[] {
+  if (locale === "am") {
+    return ["በሬስቶራንት", "ለመውሰድ", "ዴሊቨሪ"];
+  }
+
+  return ["Dine In", "To Go", "Delivery"];
+}
+
+function mapRestaurantInfo(locale: Locale) {
+  if (locale === "am") {
+    return {
+      name: "የእኛ ሬስቶራንት",
+      searchPlaceholder: "ምግብ፣ ቡና ወዘተ ይፈልጉ...",
+    };
+  }
+
+  return {
+    name: restaurantInfo.name,
+    searchPlaceholder: restaurantInfo.searchPlaceholder,
+  };
+}
+
+async function getMenuData(locale: Locale) {
   try {
     const supabase = createServerSupabaseClient();
 
@@ -54,7 +96,7 @@ async function getMenuData() {
     }
 
     const menuCategories = (categoryData as CategoryRow[])
-      .map((item) => item.name)
+      .map((item) => translateCategory(item.name, locale))
       .filter((item) => item.trim().length > 0);
 
     const menuDishes: Dish[] = (dishesData as DishRow[]).map((dishRow) => {
@@ -65,20 +107,35 @@ async function getMenuData() {
       return {
         title: dishRow.title,
         price: Number(dishRow.price),
-        availability: `${dishRow.availability_count} Bowls available`,
+        availability:
+          locale === "am"
+            ? `${dishRow.availability_count} ሳህኖች ይገኛሉ`
+            : `${dishRow.availability_count} Bowls available`,
         image: dishRow.image_url || "/image/pizza.png",
-        categories: categoryName ? [categoryName] : [],
+        categories: categoryName ? [translateCategory(categoryName, locale)] : [],
       };
     });
 
     return {
-      menuCategories: menuCategories.length > 0 ? menuCategories : [...categories],
-      menuDishes: menuDishes.length > 0 ? menuDishes : dishes,
+      menuCategories:
+        menuCategories.length > 0 ? menuCategories : categories.map((category) => translateCategory(category, locale)),
+      menuDishes:
+        menuDishes.length > 0
+          ? menuDishes
+          : dishes.map((dish) => ({
+              ...dish,
+              availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
+              categories: dish.categories.map((category) => translateCategory(category, locale)),
+            })),
     };
   } catch {
     return {
-      menuCategories: [...categories],
-      menuDishes: dishes,
+      menuCategories: categories.map((category) => translateCategory(category, locale)),
+      menuDishes: dishes.map((dish) => ({
+        ...dish,
+        availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
+        categories: dish.categories.map((category) => translateCategory(category, locale)),
+      })),
     };
   }
 }
@@ -93,8 +150,11 @@ function formatCurrentDate() {
 }
 
 export default async function MenuPage() {
+  const locale = await getServerLocale();
   const currentDate = formatCurrentDate();
-  const { menuCategories, menuDishes } = await getMenuData();
+  const { menuCategories, menuDishes } = await getMenuData(locale);
+  const localizedRestaurantInfo = mapRestaurantInfo(locale);
+  const localizedOrderTypes = mapOrderTypes(locale);
 
   return (
     <main className="app-bg-main min-h-screen w-full text-white">
@@ -102,10 +162,10 @@ export default async function MenuPage() {
         <Sidenav />
         <HomeDashboard
           date={currentDate}
-          restaurantInfo={restaurantInfo}
+          restaurantInfo={localizedRestaurantInfo}
           categories={menuCategories}
           dishes={menuDishes}
-          orderTypes={orderTypes}
+          orderTypes={localizedOrderTypes}
           initialOrderItems={[]}
           initialOrderSummary={orderSummary}
         />

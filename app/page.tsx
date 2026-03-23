@@ -2,14 +2,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { dishes } from "@/lib/data";
 import { formatCurrency } from "@/lib/currency";
+import { t } from "@/lib/i18n/messages";
+import { getServerLocale } from "@/lib/i18n/server";
 
-export default function Page() {
+export default async function Page() {
+  const locale = await getServerLocale();
   const featuredDishes = dishes.slice(0, 2);
   const showcaseImages = ["/image/pizza.png", "/image/image.png"];
   const highlights = [
-    { label: "Average Prep", value: "18 min" },
-    { label: "Active Customers", value: "2.4k+" },
-    { label: "Menu Categories", value: "12" },
+    { label: t(locale, "home", "statPrepLabel"), value: t(locale, "home", "statPrepValue") },
+    { label: t(locale, "home", "statCustomersLabel"), value: t(locale, "home", "statCustomersValue") },
+    { label: t(locale, "home", "statCategoriesLabel"), value: t(locale, "home", "statCategoriesValue") },
   ];
 
   return (
@@ -19,15 +22,15 @@ export default function Page() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="app-bg-logo flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-sm font-bold app-text-accent">
-                FR
+                {t(locale, "common", "brandShort")}
               </div>
-              <p className="text-lg font-semibold tracking-wide">FLAVOURS</p>
+              <p className="text-lg font-semibold tracking-wide">{t(locale, "common", "brandName")}</p>
             </div>
 
             <nav className="hidden items-center gap-8 text-sm text-gray-300 md:flex">
-              <Link className="app-text-accent" href="/">Home</Link>
-              <Link className="hover:text-white" href="/about-us">About Us</Link>
-              <Link className="hover:text-white" href="/products">Products</Link>
+              <Link className="app-text-accent" href="/">{t(locale, "common", "navHome")}</Link>
+              <Link className="hover:text-white" href="/about-us">{t(locale, "common", "navAbout")}</Link>
+              <Link className="hover:text-white" href="/products">{t(locale, "common", "navProducts")}</Link>
             </nav>
 
             <div className="flex items-center gap-3">
@@ -35,15 +38,15 @@ export default function Page() {
                 href="/menu"
                 className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white"
               >
-                Order Now
+                {t(locale, "common", "orderNow")}
               </Link>
             </div>
           </div>
 
           <nav className="mt-3 flex items-center gap-4 text-xs text-gray-300 md:hidden">
-            <Link className="app-text-accent" href="/">Home</Link>
-            <Link className="hover:text-white" href="/about-us">About Us</Link>
-            <Link className="hover:text-white" href="/products">Products</Link>
+            <Link className="app-text-accent" href="/">{t(locale, "common", "navHome")}</Link>
+            <Link className="hover:text-white" href="/about-us">{t(locale, "common", "navAbout")}</Link>
+            <Link className="hover:text-white" href="/products">{t(locale, "common", "navProducts")}</Link>
           </nav>
         </header>
 
@@ -54,17 +57,17 @@ export default function Page() {
           <div className="relative z-10 grid w-full gap-8 lg:grid-cols-2 lg:items-center">
             <div className="max-w-2xl">
               <p className="inline-flex rounded-full border border-white/15 px-3 py-1 text-xs font-semibold tracking-wide app-text-accent">
-                WELCOME TO OUR RESTAURANT
+                {t(locale, "home", "welcomeBadge")}
               </p>
               <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl xl:text-7xl">
-                Your <span className="app-text-accent">Go-To</span> Spot
+                {t(locale, "home", "titleLine1")}
                 <br />
-                For Great <span className="app-text-accent">Food</span> And
+                {t(locale, "home", "titleLine2")}
                 <br />
-                Good <span className="app-text-accent">Times</span>
+                {t(locale, "home", "titleLine3")}
               </h1>
               <p className="mt-5 max-w-xl text-base text-gray-300 md:text-lg">
-                Join us for delicious meals and memorable moments.
+                {t(locale, "home", "subtitle")}
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -81,13 +84,13 @@ export default function Page() {
                   href="/menu"
                   className="app-bg-accent rounded-full px-7 py-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(234,124,105,0.35)]"
                 >
-                  Order Now
+                  {t(locale, "common", "orderNow")}
                 </Link>
                 <Link
                   href="/about-us"
                   className="app-hover-accent-soft rounded-full border border-white/15 px-7 py-3 text-sm font-semibold text-gray-200"
                 >
-                  Learn More
+                  {t(locale, "home", "learnMore")}
                 </Link>
               </div>
             </div>
@@ -134,34 +137,34 @@ export default function Page() {
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <article className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6">
-            <p className="text-xs uppercase tracking-wide text-gray-400">Why Guests Choose Us</p>
+            <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "home", "whyChoose")}</p>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
-                <p className="text-sm font-semibold">Fast, Reliable Prep</p>
-                <p className="mt-2 text-xs text-gray-300">Live kitchen flow keeps dine-in and delivery timelines consistent.</p>
+                <p className="text-sm font-semibold">{t(locale, "home", "whyFastTitle")}</p>
+                <p className="mt-2 text-xs text-gray-300">{t(locale, "home", "whyFastDesc")}</p>
               </div>
               <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
-                <p className="text-sm font-semibold">Fresh Daily Menu</p>
-                <p className="mt-2 text-xs text-gray-300">Balanced choices for comfort meals, grilled dishes, and lighter bowls.</p>
+                <p className="text-sm font-semibold">{t(locale, "home", "whyFreshTitle")}</p>
+                <p className="mt-2 text-xs text-gray-300">{t(locale, "home", "whyFreshDesc")}</p>
               </div>
               <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
-                <p className="text-sm font-semibold">Clear Order Tracking</p>
-                <p className="mt-2 text-xs text-gray-300">From confirmation to delivery, status updates stay visible end to end.</p>
+                <p className="text-sm font-semibold">{t(locale, "home", "whyTrackTitle")}</p>
+                <p className="mt-2 text-xs text-gray-300">{t(locale, "home", "whyTrackDesc")}</p>
               </div>
             </div>
           </article>
 
           <article className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6">
-            <p className="text-xs uppercase tracking-wide text-gray-400">Quick Access</p>
+            <p className="text-xs uppercase tracking-wide text-gray-400">{t(locale, "home", "quickAccess")}</p>
             <div className="mt-4 grid gap-3">
               <Link href="/products" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
-                Browse Featured Products
+                {t(locale, "home", "qaProducts")}
               </Link>
               <Link href="/messages" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
-                Send a Support Message
+                {t(locale, "home", "qaMessages")}
               </Link>
               <Link href="/notifications" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
-                Review Order Notifications
+                {t(locale, "home", "qaNotifications")}
               </Link>
             </div>
           </article>

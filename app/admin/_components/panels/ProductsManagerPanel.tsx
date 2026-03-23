@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { formatCurrency } from "@/lib/currency";
 import type { CategoryRecord, EditableDish } from "../types";
 
 type ProductsManagerPanelProps = {
@@ -38,16 +42,19 @@ export default function ProductsManagerPanel({
   onOpenCreateModal,
   onOpenEditModal,
 }: ProductsManagerPanelProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
+
   return (
     <section className="app-bg-panel rounded-2xl p-4">
       <div className="flex flex-col gap-3 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl font-semibold">Products Management</h2>
+        <h2 className="text-2xl font-semibold">{isAmharic ? "የምርቶች አስተዳደር" : "Products Management"}</h2>
         <button
           type="button"
           onClick={onToggleCategoryManager}
           className="app-bg-elevated rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-200"
         >
-          Manage Categories
+          {isAmharic ? "ምድቦችን አስተዳድር" : "Manage Categories"}
         </button>
       </div>
 
@@ -57,7 +64,7 @@ export default function ProductsManagerPanel({
           onClick={() => onActiveCategoryChange("all")}
           className={`pb-2 text-sm font-semibold ${activeCategoryId === "all" ? "app-text-accent" : "text-gray-300"}`}
         >
-          All
+          {isAmharic ? "ሁሉም" : "All"}
         </button>
         {categories.map((category) => (
           <button
@@ -80,14 +87,14 @@ export default function ProductsManagerPanel({
               value={newCategoryName}
               onChange={(event) => onNewCategoryNameChange(event.target.value)}
               className="app-bg-elevated h-10 w-full rounded-lg border border-white/10 px-3 text-sm text-gray-100"
-              placeholder="New category name"
+              placeholder={isAmharic ? "አዲስ ምድብ ስም" : "New category name"}
             />
             <button
               type="submit"
               disabled={isSaving}
               className="app-bg-accent rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Add Category
+              {isAmharic ? "ምድብ ጨምር" : "Add Category"}
             </button>
           </form>
         </div>
@@ -100,7 +107,7 @@ export default function ProductsManagerPanel({
           className="app-bg-main rounded-2xl border border-dashed border-white/25 px-4 py-10 text-center"
         >
           <p className="text-3xl leading-none app-text-accent">+</p>
-          <p className="mt-3 text-sm font-semibold app-text-accent">Add new dish</p>
+          <p className="mt-3 text-sm font-semibold app-text-accent">{isAmharic ? "አዲስ ምግብ ጨምር" : "Add new dish"}</p>
         </button>
 
         {dishes.map((dish) => (
@@ -116,14 +123,14 @@ export default function ProductsManagerPanel({
             </div>
             <h3 className="mt-4 min-h-12 text-center text-base font-medium text-gray-100">{dish.title}</h3>
             <p className="mt-1 text-center text-sm text-gray-400">
-              ${Number(dish.price || 0).toFixed(2)} • {dish.availabilityCount || "0"} Bowls
+              {formatCurrency(Number(dish.price || 0))} • {dish.availabilityCount || "0"} {isAmharic ? "ሳህኖች" : "Bowls"}
             </p>
             <button
               type="button"
               onClick={() => onOpenEditModal(dish)}
               className="app-bg-elevated mt-4 w-full rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold app-text-accent"
             >
-              Edit dish
+              {isAmharic ? "ምግብ አርትዕ" : "Edit dish"}
             </button>
           </article>
         ))}
@@ -131,7 +138,7 @@ export default function ProductsManagerPanel({
 
       {selectedDishTitle ? (
         <p className="mt-5 text-xs text-gray-400">
-          Selected dish: <span className="text-gray-200">{selectedDishTitle}</span> ({selectedDishCategoryName ?? "No category"})
+          {isAmharic ? "የተመረጠ ምግብ:" : "Selected dish:"} <span className="text-gray-200">{selectedDishTitle}</span> ({selectedDishCategoryName ?? (isAmharic ? "ምድብ የለም" : "No category")})
         </p>
       ) : null}
 

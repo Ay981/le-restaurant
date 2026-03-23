@@ -6,6 +6,7 @@ import TransactionUpload from "@/app/_components/payments/TransactionUpload";
 import { formatCurrency } from "@/lib/currency";
 import type { OrderItem, OrderSummary } from "@/lib/data";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 type PaymentModalProps = {
   orderItems: OrderItem[];
@@ -28,9 +29,11 @@ export default function PaymentModal({
   deliveryDetails,
   onClose,
 }: PaymentModalProps) {
+  const { locale } = useI18n();
+  const isAmharic = locale === "am";
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bankTransfer");
   const [receiptVerified, setReceiptVerified] = useState(false);
-  const [receiptMessage, setReceiptMessage] = useState("Upload a receipt and verify it.");
+  const [receiptMessage, setReceiptMessage] = useState(isAmharic ? "ደረሰኝ ይጫኑ እና ያረጋግጡ።" : "Upload a receipt and verify it.");
   const [receiptReference, setReceiptReference] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -71,7 +74,11 @@ export default function PaymentModal({
       isDelivery &&
       (!deliveryDetails.destination.trim() || !deliveryDetails.customerName.trim() || !deliveryDetails.customerPhone.trim())
     ) {
-      setSubmitError("Delivery orders require destination, customer name, and customer phone.");
+      setSubmitError(
+        isAmharic
+          ? "የዴሊቨሪ ትዕዛዝ መድረሻ፣ የደንበኛ ስም እና ስልክ ይፈልጋል።"
+          : "Delivery orders require destination, customer name, and customer phone.",
+      );
       return;
     }
 
@@ -107,20 +114,24 @@ export default function PaymentModal({
 
       const payload = (await response.json()) as { message?: string };
       if (!response.ok) {
-        throw new Error(payload.message ?? "Could not create order record.");
+        throw new Error(payload.message ?? (isAmharic ? "የትዕዛዝ መዝገብ መፍጠር አልተቻለም።" : "Could not create order record."));
       }
 
       setSubmitMessage(
         session?.user?.id
-          ? "Payment confirmed. This order has been added to your history."
-          : "Payment confirmed. Sign in next time to unlock order history and personalized suggestions.",
+          ? isAmharic
+            ? "ክፍያው ተረጋግጧል። ይህ ትዕዛዝ ወደ ታሪክዎ ታክሏል።"
+            : "Payment confirmed. This order has been added to your history."
+          : isAmharic
+            ? "ክፍያው ተረጋግጧል። በሚቀጥለው ጊዜ በመግባት የትዕዛዝ ታሪክና የግል ምክሮች ያግኙ።"
+            : "Payment confirmed. Sign in next time to unlock order history and personalized suggestions.",
       );
 
       setTimeout(() => {
         onClose();
       }, 700);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Failed to confirm payment.");
+      setSubmitError(error instanceof Error ? error.message : isAmharic ? "ክፍያን ማረጋገጥ አልተቻለም።" : "Failed to confirm payment.");
     } finally {
       setIsSavingOrder(false);
     }
@@ -140,14 +151,14 @@ export default function PaymentModal({
         <section className="min-h-0 overflow-y-auto overscroll-y-contain border-b border-white/10 p-5 xl:border-b-0 xl:border-r xl:border-white/10 xl:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-3xl font-semibold text-white">Confirmation</h2>
-              <p className="mt-1 text-sm text-gray-400">Orders {orderSummary.orderNumber}</p>
+              <h2 className="text-3xl font-semibold text-white">{isAmharic ? "ማረጋገጫ" : "Confirmation"}</h2>
+              <p className="mt-1 text-sm text-gray-400">{isAmharic ? "ትዕዛዝ" : "Orders"} {orderSummary.orderNumber}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="app-bg-accent h-10 w-10 rounded-xl text-xl leading-none text-white"
-              aria-label="Close payment modal"
+              aria-label={isAmharic ? "የክፍያ ሞዳልን ዝጋ" : "Close payment modal"}
             >
               +
             </button>
@@ -184,22 +195,22 @@ export default function PaymentModal({
 
           <div className="mt-6 border-t border-white/10 pt-4 text-sm text-gray-300">
             <div className="flex items-center justify-between">
-              <span>Discount</span>
+              <span>{isAmharic ? "ቅናሽ" : "Discount"}</span>
               <span>{formatCurrency(orderSummary.discount)}</span>
             </div>
             <div className="mt-3 flex items-center justify-between text-base text-gray-100">
-              <span>Sub total</span>
+              <span>{isAmharic ? "ንዑስ ጠቅላላ" : "Sub total"}</span>
               <span>{formatCurrency(orderSummary.subtotal)}</span>
             </div>
           </div>
         </section>
 
         <section className="min-h-0 overflow-y-auto overscroll-y-contain p-5 xl:p-6">
-          <h2 className="text-3xl font-semibold text-white">Payment</h2>
-          <p className="mt-1 text-sm text-gray-400">4 payment methods available</p>
+          <h2 className="text-3xl font-semibold text-white">{isAmharic ? "ክፍያ" : "Payment"}</h2>
+          <p className="mt-1 text-sm text-gray-400">{isAmharic ? "4 የክፍያ ዘዴዎች አሉ" : "4 payment methods available"}</p>
 
           <div className="mt-6">
-            <h3 className="text-sm font-medium text-gray-200">Payment Method</h3>
+            <h3 className="text-sm font-medium text-gray-200">{isAmharic ? "የክፍያ ዘዴ" : "Payment Method"}</h3>
             <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
               {paymentOptions.map((option) => {
                 const isActive = paymentMethod === option.id;
@@ -215,11 +226,11 @@ export default function PaymentModal({
                         setPaymentMethod(option.id);
                         if (option.id !== "bankTransfer") {
                           setReceiptVerified(true);
-                          setReceiptMessage("Verification is only required for bank transfer.");
+                          setReceiptMessage(isAmharic ? "ማረጋገጫ ለባንክ ዝውውር ብቻ ያስፈልጋል።" : "Verification is only required for bank transfer.");
                           setReceiptReference(null);
                         } else {
                           setReceiptVerified(false);
-                          setReceiptMessage("Upload a receipt and verify it.");
+                          setReceiptMessage(isAmharic ? "ደረሰኝ ይጫኑ እና ያረጋግጡ።" : "Upload a receipt and verify it.");
                           setReceiptReference(null);
                         }
                       }
@@ -233,7 +244,15 @@ export default function PaymentModal({
                           : "border-white/10 text-gray-300 hover:border-white/20",
                     ].join(" ")}
                   >
-                    {option.label}
+                    {isAmharic
+                      ? option.id === "bankTransfer"
+                        ? "የባንክ ዝውውር"
+                        : option.id === "cash"
+                          ? "ጥሬ ገንዘብ"
+                          : option.id === "teleBirr"
+                            ? "ቴሌ ብር"
+                            : "ኤም-ፔሳ"
+                      : option.label}
                   </button>
                 );
               })}
@@ -244,7 +263,7 @@ export default function PaymentModal({
             
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm text-gray-300">
-                Order Type
+                {isAmharic ? "የትዕዛዝ አይነት" : "Order Type"}
                 <input
                   readOnly
                   className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100"
@@ -252,7 +271,7 @@ export default function PaymentModal({
                 />
               </label>
               <label className="text-sm text-gray-300">
-                Table no.
+                {isAmharic ? "የጠረጴዛ ቁጥር" : "Table no."}
                 <input className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100" defaultValue="140" />
               </label>
             </div>
@@ -265,7 +284,7 @@ export default function PaymentModal({
                 expectedAmount={orderSummary.subtotal}
                 onVerificationChange={(verification) => {
                   setReceiptVerified(verification.verified);
-                  setReceiptMessage(verification.message ?? "Verification state updated.");
+                  setReceiptMessage(verification.message ?? (isAmharic ? "የማረጋገጫ ሁኔታ ተዘምኗል።" : "Verification state updated."));
                   setReceiptReference(verification.transactionReference ?? null);
                 }}
               />
@@ -283,7 +302,7 @@ export default function PaymentModal({
               onClick={onClose}
               className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Cancel
+              {isAmharic ? "ሰርዝ" : "Cancel"}
             </button>
             <button
               type="button"
@@ -293,7 +312,7 @@ export default function PaymentModal({
               disabled={(paymentMethod === "bankTransfer" && !receiptVerified) || isSavingOrder}
               className="app-bg-accent rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSavingOrder ? "Confirming..." : "Confirm Payment"}
+              {isSavingOrder ? (isAmharic ? "በማረጋገጥ ላይ..." : "Confirming...") : isAmharic ? "ክፍያ አረጋግጥ" : "Confirm Payment"}
             </button>
           </div>
 
