@@ -201,12 +201,36 @@ export default function MessagesPage() {
       <div className="app-bg-main flex min-h-screen w-full flex-col md:flex-row">
         <Sidenav />
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
-          <section className="app-bg-panel rounded-2xl border border-white/10 p-5">
-            <h1 className="text-2xl font-semibold">Contact Support</h1>
-            <p className="mt-1 text-sm text-gray-300">Send a message related to your order. Our team will review it in admin messages.</p>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6 lg:p-8">
+          <section className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6 lg:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-semibold md:text-3xl">Contact Support</h1>
+                <p className="mt-1 max-w-2xl text-sm text-gray-300 md:text-base">
+                  Send a message related to your order. The support team can see your order context and reply with updates.
+                </p>
+              </div>
+              <Link href="/contact-us" className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200">
+                Contact Info
+              </Link>
+            </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_auto]">
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Open Threads</p>
+                <p className="mt-1 text-lg font-semibold text-white">{sortedMessages.filter((item) => item.status === "open").length}</p>
+              </article>
+              <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Resolved Threads</p>
+                <p className="mt-1 text-lg font-semibold text-white">{sortedMessages.filter((item) => item.status === "resolved").length}</p>
+              </article>
+              <article className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Eligible Orders</p>
+                <p className="mt-1 text-lg font-semibold text-white">{orders.length}</p>
+              </article>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-[240px_1fr_auto]">
               <select
                 value={selectedOrderId}
                 onChange={(event) => setSelectedOrderId(event.target.value)}
@@ -223,7 +247,7 @@ export default function MessagesPage() {
               <textarea
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
-                rows={2}
+                rows={3}
                 maxLength={1000}
                 placeholder="Describe your issue or request"
                 className="app-bg-elevated rounded-xl border border-white/10 px-3 py-2 text-sm text-gray-100 outline-none"
@@ -241,25 +265,38 @@ export default function MessagesPage() {
               </button>
             </div>
 
+            <p className="mt-2 text-xs text-gray-400">Tip: Include order details, missing items, or timing issue so support can act faster.</p>
+
             {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}
             {successMessage ? <p className="mt-3 text-sm text-emerald-300">{successMessage}</p> : null}
           </section>
 
-          <section className="app-bg-panel flex-1 rounded-2xl border border-white/10 p-5">
-            <h2 className="text-lg font-semibold">My Messages</h2>
+          <section className="app-bg-panel flex-1 rounded-2xl border border-white/10 p-5 md:p-6 lg:p-7">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold md:text-xl">My Messages</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  void loadData();
+                }}
+                className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200"
+              >
+                Refresh
+              </button>
+            </div>
             {sortedMessages.length === 0 ? (
               <p className="mt-3 text-sm text-gray-400">No messages yet.</p>
             ) : (
               <div className="mt-4 space-y-3">
                 {sortedMessages.map((item) => (
-                  <article key={item.id} className="app-bg-elevated rounded-xl border border-white/10 p-4">
+                  <article key={item.id} className="app-bg-elevated rounded-xl border border-white/10 p-4 md:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white">{item.orderNumber}</p>
+                      <p className="text-sm font-semibold text-white md:text-base">{item.orderNumber}</p>
                       <span className={`rounded-full px-2.5 py-1 text-xs ${item.status === "resolved" ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`}>
                         {item.status === "resolved" ? "Resolved" : "Open"}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-gray-200">{item.message}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-gray-200">{item.message}</p>
                     <p className="mt-2 text-xs text-gray-400">Sent: {formatDateTime(item.createdAt)}</p>
 
                     {item.orderItems.length > 0 ? (

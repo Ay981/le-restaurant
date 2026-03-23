@@ -6,6 +6,11 @@ import { formatCurrency } from "@/lib/currency";
 export default function Page() {
   const featuredDishes = dishes.slice(0, 2);
   const showcaseImages = ["/image/pizza.png", "/image/image.png"];
+  const highlights = [
+    { label: "Average Prep", value: "18 min" },
+    { label: "Active Customers", value: "2.4k+" },
+    { label: "Menu Categories", value: "12" },
+  ];
 
   return (
     <main className="app-bg-main min-h-screen text-white">
@@ -42,7 +47,7 @@ export default function Page() {
           </nav>
         </header>
 
-        <div className="relative mt-3 flex flex-1 overflow-hidden rounded-3xl border border-white/10 app-bg-panel p-5 md:p-8 lg:mt-4 lg:p-10">
+        <div className="relative mt-3 overflow-hidden rounded-3xl border border-white/10 app-bg-panel p-5 md:p-8 lg:mt-4 lg:p-10">
           <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full app-bg-accent opacity-15 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 right-12 h-64 w-64 rounded-full app-bg-accent opacity-15 blur-3xl" />
 
@@ -62,6 +67,15 @@ export default function Page() {
                 Join us for delicious meals and memorable moments.
               </p>
 
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {highlights.map((item) => (
+                  <article key={item.label} className="app-bg-elevated rounded-xl border border-white/10 px-4 py-3">
+                    <p className="text-xs uppercase tracking-wide text-gray-400">{item.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-white">{item.value}</p>
+                  </article>
+                ))}
+              </div>
+
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href="/menu"
@@ -70,10 +84,10 @@ export default function Page() {
                   Order Now
                 </Link>
                 <Link
-                  href="/my-orders"
+                  href="/about-us"
                   className="app-hover-accent-soft rounded-full border border-white/15 px-7 py-3 text-sm font-semibold text-gray-200"
                 >
-                  Track Order
+                  Learn More
                 </Link>
               </div>
             </div>
@@ -117,6 +131,41 @@ export default function Page() {
             </div>
           </div>
         </div>
+
+        <section className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+          <article className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6">
+            <p className="text-xs uppercase tracking-wide text-gray-400">Why Guests Choose Us</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
+                <p className="text-sm font-semibold">Fast, Reliable Prep</p>
+                <p className="mt-2 text-xs text-gray-300">Live kitchen flow keeps dine-in and delivery timelines consistent.</p>
+              </div>
+              <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
+                <p className="text-sm font-semibold">Fresh Daily Menu</p>
+                <p className="mt-2 text-xs text-gray-300">Balanced choices for comfort meals, grilled dishes, and lighter bowls.</p>
+              </div>
+              <div className="app-bg-elevated rounded-xl border border-white/10 p-4">
+                <p className="text-sm font-semibold">Clear Order Tracking</p>
+                <p className="mt-2 text-xs text-gray-300">From confirmation to delivery, status updates stay visible end to end.</p>
+              </div>
+            </div>
+          </article>
+
+          <article className="app-bg-panel rounded-2xl border border-white/10 p-5 md:p-6">
+            <p className="text-xs uppercase tracking-wide text-gray-400">Quick Access</p>
+            <div className="mt-4 grid gap-3">
+              <Link href="/products" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
+                Browse Featured Products
+              </Link>
+              <Link href="/messages" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
+                Send a Support Message
+              </Link>
+              <Link href="/notifications" className="app-hover-accent-soft rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-100">
+                Review Order Notifications
+              </Link>
+            </div>
+          </article>
+        </section>
       </section>
     </main>
   );

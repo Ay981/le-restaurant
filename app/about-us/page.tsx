@@ -40,7 +40,7 @@ export default function AboutUsPage() {
           </div>
         </header>
 
-        <div className="relative mt-3 flex flex-1 overflow-hidden rounded-3xl border border-white/10 app-bg-panel p-5 md:p-8 lg:mt-4 lg:p-10">
+        <div className="relative mt-3 overflow-hidden rounded-3xl border border-white/10 app-bg-panel p-5 md:p-8 lg:mt-4 lg:p-10">
           <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full app-bg-accent opacity-10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 right-8 h-56 w-56 rounded-full app-bg-accent opacity-10 blur-3xl" />
 
@@ -71,6 +71,20 @@ export default function AboutUsPage() {
                     <p className="mt-2 text-sm text-gray-300">{item.description}</p>
                   </article>
                 ))}
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-white/10 app-bg-elevated p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400">What We Focus On Daily</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 p-3">
+                    <p className="text-sm font-medium text-white">Quality consistency</p>
+                    <p className="mt-1 text-xs text-gray-300">Recipe standards and fresh prep timing across all meal periods.</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 p-3">
+                    <p className="text-sm font-medium text-white">Service transparency</p>
+                    <p className="mt-1 text-xs text-gray-300">Clear handoff between kitchen, dispatch, and customer communication.</p>
+                  </div>
+                </div>
               </div>
             </div>
 
