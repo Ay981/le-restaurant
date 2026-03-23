@@ -14,7 +14,7 @@ type NotificationRow = {
 
 export async function GET(request: Request) {
   try {
-    const authResult = await requireRoleAccess(request, ["customer", "admin", "staff"]);
+    const authResult = await requireRoleAccess(request, ["customer"]);
     if (!authResult.ok) {
       return NextResponse.json({ message: authResult.message }, { status: authResult.status });
     }

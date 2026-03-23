@@ -14,7 +14,7 @@ type OrderRow = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
-    const authResult = await requireRoleAccess(request, ["customer", "admin", "staff"]);
+    const authResult = await requireRoleAccess(request, ["customer"]);
     if (!authResult.ok) {
       return NextResponse.json({ message: authResult.message }, { status: authResult.status });
     }
@@ -24,7 +24,17 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Order id is required." }, { status: 400 });
     }
 
-    const body = (await request.json()) as { comment?: unknown };
+    let body: { comment?: unknown };
+    try {
+      body = (await request.json()) as { comment?: unknown };
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return NextResponse.json({ message: "Malformed JSON." }, { status: 400 });
+      }
+
+      throw error;
+    }
+
     const comment = String(body.comment ?? "").trim();
 
     if (!comment) {

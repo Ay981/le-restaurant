@@ -158,7 +158,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       });
 
       if (notificationError) {
-        return NextResponse.json({ message: notificationError.message }, { status: 400 });
+        console.error("Non-fatal notification insertion failure in order status update", {
+          orderId: id,
+          notificationError,
+        });
       }
     }
 

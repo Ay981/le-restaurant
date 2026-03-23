@@ -1,2 +1,4 @@
-truncate table public.order_status_audit, public.order_items, public.orders restart identity cascade;
-truncate table public.payment_receipt_verifications restart identity;
+-- Deprecated migration intentionally left as no-op.
+-- Destructive data cleanup moved to manual script:
+--   supabase/scripts/clear_payment_data.sql
+-- This prevents automatic truncation during migration runs.

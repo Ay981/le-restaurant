@@ -139,7 +139,7 @@ export default function AuthenticatedInsights() {
       <div className="mt-6 rounded-2xl border border-white/10 p-4 text-sm text-gray-300">
         Sign in to unlock order history and personalized dish suggestions.
         <div className="mt-2">
-          <Link href="/sign-in?next=/" className="app-text-accent hover:underline">
+          <Link href="/sign-in?next=/menu" className="app-text-accent hover:underline">
             Sign in
           </Link>
         </div>

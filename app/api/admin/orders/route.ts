@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminOrStaffAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { PAYMENT_RECEIPTS_BUCKET } from "@/lib/supabase/payment-receipt-upload";
 
 type DbOrderStatus = "pending" | "preparing" | "served" | "completed" | "cancelled";
 type UiOrderStatus = "pending" | "in_progress" | "delivered";
@@ -33,8 +34,16 @@ type ReceiptRow = {
   order_number: string;
   provider: string;
   transaction_reference: string;
+  receipt_file_path: string | null;
+  receipt_file_name: string | null;
+  receipt_mime_type: string | null;
+  expected_amount: number | null;
   verified_amount: number | null;
   verified_currency: string | null;
+  expected_receiver: string | null;
+  verified_receiver: string | null;
+  amount_matches_expected: boolean | null;
+  receiver_matches_expected: boolean | null;
   created_at: string;
 };
 
@@ -133,8 +142,16 @@ export async function GET(request: Request) {
     let latestReceiptByOrderNumber = new Map<string, {
       provider: string;
       transactionReference: string;
+      filePath: string | null;
+      fileName: string | null;
+      fileMimeType: string | null;
+      expectedAmount: number | null;
       verifiedAmount: number | null;
       verifiedCurrency: string | null;
+      expectedReceiver: string | null;
+      verifiedReceiver: string | null;
+      amountMatchesExpected: boolean | null;
+      receiverMatchesExpected: boolean | null;
       verifiedAt: string;
     }>();
 
@@ -150,7 +167,7 @@ export async function GET(request: Request) {
     if (orderNumbers.length > 0) {
       const { data: receiptsData, error: receiptsError } = await supabase
         .from("payment_receipt_verifications")
-        .select("order_number, provider, transaction_reference, verified_amount, verified_currency, created_at")
+        .select("order_number, provider, transaction_reference, receipt_file_path, receipt_file_name, receipt_mime_type, expected_amount, verified_amount, verified_currency, expected_receiver, verified_receiver, amount_matches_expected, receiver_matches_expected, created_at")
         .in("order_number", orderNumbers)
         .order("created_at", { ascending: false });
 
@@ -164,14 +181,46 @@ export async function GET(request: Request) {
           accumulator.set(receipt.order_number, {
             provider: receipt.provider,
             transactionReference: receipt.transaction_reference,
+            filePath: receipt.receipt_file_path,
+            fileName: receipt.receipt_file_name,
+            fileMimeType: receipt.receipt_mime_type,
+            expectedAmount: receipt.expected_amount === null ? null : Number(receipt.expected_amount),
             verifiedAmount: receipt.verified_amount === null ? null : Number(receipt.verified_amount),
             verifiedCurrency: receipt.verified_currency,
+            expectedReceiver: receipt.expected_receiver,
+            verifiedReceiver: receipt.verified_receiver,
+            amountMatchesExpected: receipt.amount_matches_expected,
+            receiverMatchesExpected: receipt.receiver_matches_expected,
             verifiedAt: receipt.created_at,
           });
         }
 
         return accumulator;
-      }, new Map<string, { provider: string; transactionReference: string; verifiedAmount: number | null; verifiedCurrency: string | null; verifiedAt: string }>());
+      }, new Map<string, { provider: string; transactionReference: string; filePath: string | null; fileName: string | null; fileMimeType: string | null; expectedAmount: number | null; verifiedAmount: number | null; verifiedCurrency: string | null; expectedReceiver: string | null; verifiedReceiver: string | null; amountMatchesExpected: boolean | null; receiverMatchesExpected: boolean | null; verifiedAt: string }>());
+    }
+
+    const receiptFilePathToSignedUrl = new Map<string, string>();
+    const receiptPaths = [...latestReceiptByOrderNumber.values()]
+      .map((receipt) => receipt.filePath)
+      .filter((path): path is string => typeof path === "string" && path.length > 0);
+
+    if (receiptPaths.length > 0) {
+      const uniqueReceiptPaths = [...new Set(receiptPaths)];
+      const { data: signedUrlsData, error: signedUrlsError } = await supabase.storage
+        .from(PAYMENT_RECEIPTS_BUCKET)
+        .createSignedUrls(uniqueReceiptPaths, 60 * 60);
+
+      if (signedUrlsError) {
+        return NextResponse.json({ message: signedUrlsError.message }, { status: 400 });
+      }
+
+      for (const signedItem of signedUrlsData ?? []) {
+        if (!signedItem.path || !signedItem.signedUrl) {
+          continue;
+        }
+
+        receiptFilePathToSignedUrl.set(signedItem.path, signedItem.signedUrl);
+      }
     }
 
     if (orderIds.length > 0) {
@@ -215,7 +264,28 @@ export async function GET(request: Request) {
       customerPhone: order.customer_phone,
       deliveryAddress: order.delivery_address,
       items: orderItemsByOrderId.get(order.id) ?? [],
-      receipt: latestReceiptByOrderNumber.get(order.order_number) ?? null,
+      receipt: (() => {
+        const receipt = latestReceiptByOrderNumber.get(order.order_number);
+        if (!receipt) {
+          return null;
+        }
+
+        return {
+          provider: receipt.provider,
+          transactionReference: receipt.transactionReference,
+          fileUrl: receipt.filePath ? receiptFilePathToSignedUrl.get(receipt.filePath) ?? null : null,
+          fileName: receipt.fileName,
+          fileMimeType: receipt.fileMimeType,
+          expectedAmount: receipt.expectedAmount,
+          verifiedAmount: receipt.verifiedAmount,
+          verifiedCurrency: receipt.verifiedCurrency,
+          expectedReceiver: receipt.expectedReceiver,
+          verifiedReceiver: receipt.verifiedReceiver,
+          amountMatchesExpected: receipt.amountMatchesExpected,
+          receiverMatchesExpected: receipt.receiverMatchesExpected,
+          verifiedAt: receipt.verifiedAt,
+        };
+      })(),
       feedback: feedbackByOrderId.get(order.id) ?? null,
     }));
 

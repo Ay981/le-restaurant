@@ -15,6 +15,18 @@ export function toNumeric(value: unknown): number | null {
   return null;
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "object" && value !== null) {
+    return value as Record<string, unknown>;
+  }
+
+  return null;
+}
+
+function extractDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export function firstNonEmptyString(values: unknown[]): string | null {
   for (const value of values) {
     if (typeof value === "string") {
@@ -74,6 +86,104 @@ export function extractTransactionReference(payload: Record<string, unknown>): s
     nestedData?.receiptNumber,
     nestedData?.transactionId,
   ]);
+}
+
+export function extractVerifiedAmount(payload: Record<string, unknown>): number | null {
+  const nestedData = asObject(payload.data);
+
+  return toNumeric(
+    payload.amount ??
+      payload.totalAmount ??
+      payload.total_amount ??
+      payload.total ??
+      nestedData?.amount ??
+      nestedData?.totalAmount ??
+      nestedData?.total_amount ??
+      nestedData?.total ??
+      null,
+  );
+}
+
+export function extractVerifiedCurrency(payload: Record<string, unknown>): string | null {
+  const nestedData = asObject(payload.data);
+
+  return firstNonEmptyString([
+    payload.currency,
+    payload.currencyCode,
+    payload.currency_code,
+    nestedData?.currency,
+    nestedData?.currencyCode,
+    nestedData?.currency_code,
+  ]);
+}
+
+export function extractVerifiedReceiver(payload: Record<string, unknown>): string | null {
+  const nestedData = asObject(payload.data);
+  const beneficiary = asObject(nestedData?.beneficiary);
+  const receiver = asObject(nestedData?.receiver);
+  const recipient = asObject(nestedData?.recipient);
+
+  return firstNonEmptyString([
+    payload.receiver,
+    payload.recipient,
+    payload.beneficiary,
+    payload.to,
+    payload.toAccount,
+    payload.to_account,
+    payload.receiverAccount,
+    payload.receiver_account,
+    payload.beneficiaryAccount,
+    payload.beneficiary_account,
+    nestedData?.receiver,
+    nestedData?.recipient,
+    nestedData?.beneficiary,
+    nestedData?.to,
+    nestedData?.toAccount,
+    nestedData?.to_account,
+    nestedData?.receiverAccount,
+    nestedData?.receiver_account,
+    nestedData?.beneficiaryAccount,
+    nestedData?.beneficiary_account,
+    beneficiary?.name,
+    beneficiary?.account,
+    beneficiary?.accountNumber,
+    receiver?.name,
+    receiver?.account,
+    receiver?.accountNumber,
+    recipient?.name,
+    recipient?.account,
+    recipient?.accountNumber,
+  ]);
+}
+
+export function amountsMatch(expectedAmount: number | null, verifiedAmount: number | null): boolean {
+  if (expectedAmount === null || verifiedAmount === null) {
+    return false;
+  }
+
+  return Math.abs(expectedAmount - verifiedAmount) <= 0.01;
+}
+
+export function receiversMatch(expectedReceiver: string | null, verifiedReceiver: string | null): boolean {
+  if (!expectedReceiver || !verifiedReceiver) {
+    return false;
+  }
+
+  const normalizedExpected = expectedReceiver.trim().toLowerCase();
+  const normalizedVerified = verifiedReceiver.trim().toLowerCase();
+
+  if (normalizedExpected.length === 0 || normalizedVerified.length === 0) {
+    return false;
+  }
+
+  const expectedDigits = extractDigits(normalizedExpected);
+  const verifiedDigits = extractDigits(normalizedVerified);
+
+  if (expectedDigits.length >= 4 && verifiedDigits.length >= 4) {
+    return verifiedDigits.endsWith(expectedDigits) || normalizedVerified.includes(normalizedExpected);
+  }
+
+  return normalizedVerified.includes(normalizedExpected);
 }
 
 export function isSupportedReceiptFile(file: File): boolean {

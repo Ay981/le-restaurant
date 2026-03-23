@@ -24,7 +24,7 @@ export default function NotFound() {
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              href="/"
+              href="/menu"
               className="app-bg-accent inline-flex rounded-xl px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               Back to Dashboard

@@ -29,8 +29,16 @@ type AdminOrder = {
   receipt?: {
     provider: string;
     transactionReference: string;
+    fileUrl: string | null;
+    fileName: string | null;
+    fileMimeType: string | null;
+    expectedAmount: number | null;
     verifiedAmount: number | null;
     verifiedCurrency: string | null;
+    expectedReceiver: string | null;
+    verifiedReceiver: string | null;
+    amountMatchesExpected: boolean | null;
+    receiverMatchesExpected: boolean | null;
     verifiedAt: string;
   } | null;
   feedback?: {
@@ -451,9 +459,33 @@ export default function AdminOrdersPage() {
                                 <>
                                   <p className="mt-2 text-sm">Provider: {order.receipt.provider}</p>
                                   <p className="mt-1 text-sm">Reference: {order.receipt.transactionReference}</p>
+                                  {order.receipt.fileUrl ? (
+                                    <p className="mt-1 text-sm">
+                                      Uploaded Receipt:{" "}
+                                      <a
+                                        href={order.receipt.fileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="app-text-accent underline underline-offset-2"
+                                      >
+                                        {order.receipt.fileName ?? "Open receipt"}
+                                      </a>
+                                    </p>
+                                  ) : null}
                                   <p className="mt-1 text-sm">
                                     Verified Amount: {order.receipt.verifiedAmount !== null ? formatCurrency(order.receipt.verifiedAmount) : "-"}
                                     {order.receipt.verifiedCurrency ? ` (${order.receipt.verifiedCurrency})` : ""}
+                                  </p>
+                                  <p className="mt-1 text-sm">
+                                    Expected Amount: {order.receipt.expectedAmount !== null ? formatCurrency(order.receipt.expectedAmount) : "-"}
+                                  </p>
+                                  <p className="mt-1 text-sm">
+                                    Amount Check: {order.receipt.amountMatchesExpected === null ? "N/A" : order.receipt.amountMatchesExpected ? "Matched" : "Mismatch"}
+                                  </p>
+                                  <p className="mt-1 text-sm">Verified Receiver: {order.receipt.verifiedReceiver ?? "-"}</p>
+                                  <p className="mt-1 text-sm">Expected Receiver: {order.receipt.expectedReceiver ?? "-"}</p>
+                                  <p className="mt-1 text-sm">
+                                    Receiver Check: {order.receipt.receiverMatchesExpected === null ? "N/A" : order.receipt.receiverMatchesExpected ? "Matched" : "Mismatch"}
                                   </p>
                                   <p className="mt-1 text-sm">Verified At: {formatDateTime(order.receipt.verifiedAt)}</p>
                                 </>
@@ -474,7 +506,7 @@ export default function AdminOrdersPage() {
                                       {item.note ? <p className="text-xs text-gray-400">{item.note}</p> : null}
                                     </div>
                                     <p className="text-sm text-gray-300">x{item.quantity}</p>
-                                    <p className="text-sm text-gray-100">{formatCurrency(item.lineTotal || item.unitPrice * item.quantity)}</p>
+                                    <p className="text-sm text-gray-100">{formatCurrency(item.lineTotal ?? item.unitPrice * item.quantity)}</p>
                                   </div>
                                 ))}
                               </div>

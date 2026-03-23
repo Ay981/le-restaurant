@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { uploadPaymentReceipt } from "@/lib/supabase/payment-receipt-upload";
 import {
   DEFAULT_IMAGE_VERIFICATION_ENDPOINT,
   DEFAULT_UNIVERSAL_VERIFICATION_ENDPOINT,
@@ -10,11 +11,16 @@ import {
   VERIFICATION_RETRY_ATTEMPTS,
 } from "./_lib/constants";
 import {
+  amountsMatch,
   extractTransactionReference,
+  extractVerifiedAmount,
+  extractVerifiedCurrency,
+  extractVerifiedReceiver,
   firstNonEmptyString,
   isPdfFile,
   isSupportedReceiptFile,
   normalizeEndpoint,
+  receiversMatch,
   resolveVerificationApiKey,
   resolveVerifiedStatus,
   toNumeric,
@@ -51,6 +57,7 @@ export async function POST(request: Request) {
     const file = formData.get("file");
     const orderNumberValue = formData.get("orderNumber");
     const expectedAmountValue = formData.get("expectedAmount");
+    const expectedReceiverValue = formData.get("expectedReceiver");
     const accountSuffixValue = formData.get("accountSuffix");
     const manualReferenceValue = formData.get("transactionReference");
 
@@ -106,10 +113,42 @@ export async function POST(request: Request) {
       typeof accountSuffixValue === "string" && accountSuffixValue.trim().length > 0
         ? accountSuffixValue.trim()
         : null;
+    const expectedReceiverFromRequest =
+      typeof expectedReceiverValue === "string" && expectedReceiverValue.trim().length > 0
+        ? expectedReceiverValue.trim()
+        : null;
+    const expectedReceiverFromEnv = firstNonEmptyString([
+      process.env.RECEIPT_VERIFY_EXPECTED_RECEIVER,
+      process.env.RECEIPT_EXPECTED_RECEIVER,
+    ]);
+    const expectedReceiver = expectedReceiverFromRequest ?? accountSuffix ?? expectedReceiverFromEnv;
     const manualReference =
       typeof manualReferenceValue === "string" && manualReferenceValue.trim().length > 0
         ? manualReferenceValue.trim().toUpperCase()
         : null;
+
+    if (expectedAmount === null) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message: "Expected payment amount is required for verification.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 400 },
+      );
+    }
+
+    if (!expectedReceiver) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message:
+            "Expected receiver is required. Provide account suffix in the form or set RECEIPT_VERIFY_EXPECTED_RECEIVER.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 400 },
+      );
+    }
 
     const fileArrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(fileArrayBuffer);
@@ -338,14 +377,41 @@ export async function POST(request: Request) {
       );
     }
 
-    const verifiedAmount = toNumeric(
-      parsedPayload.amount ?? parsedPayload.totalAmount ?? parsedPayload.total ?? null,
-    );
-    const verifiedCurrency = firstNonEmptyString([
-      parsedPayload.currency,
-      parsedPayload.currencyCode,
-      parsedPayload.currency_code,
-    ]);
+    const verifiedAmount = extractVerifiedAmount(parsedPayload);
+    const verifiedCurrency = extractVerifiedCurrency(parsedPayload);
+    const verifiedReceiver = extractVerifiedReceiver(parsedPayload);
+    const amountMatchesExpected = amountsMatch(expectedAmount, verifiedAmount);
+    const receiverMatchesExpected = receiversMatch(expectedReceiver, verifiedReceiver);
+
+    if (amountMatchesExpected !== true) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message:
+            verifiedAmount === null
+              ? "Could not validate payment amount from the receipt."
+              : `Receipt amount mismatch. Expected ${expectedAmount.toFixed(2)}, but receipt shows ${verifiedAmount.toFixed(2)}.`,
+          transactionReference,
+        } satisfies VerifyResponse,
+        { status: 400 },
+      );
+    }
+
+    if (receiverMatchesExpected !== true) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message:
+            verifiedReceiver === null
+              ? "Could not validate payment receiver from the receipt."
+              : `Receipt receiver mismatch. Expected ${expectedReceiver}, but receipt shows ${verifiedReceiver}.`,
+          transactionReference,
+        } satisfies VerifyResponse,
+        { status: 400 },
+      );
+    }
+
+    const uploadedReceipt = await uploadPaymentReceipt(file, orderNumber);
 
     const { error: insertError } = await supabaseAdmin
       .from("payment_receipt_verifications")
@@ -354,8 +420,16 @@ export async function POST(request: Request) {
         provider: "verify.leul.et",
         transaction_reference: transactionReference,
         receipt_hash: receiptHash,
+        receipt_file_path: uploadedReceipt.path,
+        receipt_file_name: uploadedReceipt.fileName,
+        receipt_mime_type: uploadedReceipt.mimeType,
+        expected_amount: expectedAmount,
         verified_amount: verifiedAmount,
         verified_currency: verifiedCurrency,
+        amount_matches_expected: amountMatchesExpected,
+        expected_receiver: expectedReceiver,
+        verified_receiver: verifiedReceiver,
+        receiver_matches_expected: receiverMatchesExpected,
         raw_response: parsedPayload,
       });
 

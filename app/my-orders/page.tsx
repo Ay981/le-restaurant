@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-type UiOrderStatus = "pending" | "in_progress" | "delivered";
+type UiOrderStatus = "pending" | "in_progress" | "delivered" | "unknown";
 
 type CustomerOrder = {
   id: string;
@@ -67,19 +67,22 @@ type OrderNotification = {
 function toUiStatus(status: string): UiOrderStatus {
   if (status === "pending") return "pending";
   if (status === "preparing") return "in_progress";
-  return "delivered";
+  if (status === "served" || status === "completed") return "delivered";
+  return "unknown";
 }
 
 function statusLabel(status: UiOrderStatus) {
   if (status === "pending") return "Pending";
   if (status === "in_progress") return "In Progress";
-  return "Delivered";
+  if (status === "delivered") return "Delivered";
+  return "Unknown";
 }
 
 function statusClass(status: UiOrderStatus) {
   if (status === "pending") return "bg-amber-500/20 text-amber-300";
   if (status === "in_progress") return "bg-indigo-500/20 text-indigo-300";
-  return "bg-emerald-500/20 text-emerald-300";
+  if (status === "delivered") return "bg-emerald-500/20 text-emerald-300";
+  return "bg-gray-500/20 text-gray-300";
 }
 
 function formatOrderType(orderType: CustomerOrder["orderType"]) {
@@ -308,9 +311,14 @@ export default function MyOrdersPage() {
           ...previous,
           [orderId]: payload.feedback as FeedbackEntry,
         }));
+        setFeedbackDraftByOrderId((previous) => {
+          const next = { ...previous };
+          delete next[orderId];
+          return next;
+        });
         setNotificationMessage("Your comment has been sent to the admin team.");
       } finally {
-        setSubmittingFeedbackOrderId(orderId);
+        setSubmittingFeedbackOrderId(null);
       }
     },
     [feedbackDraftByOrderId, getAccessToken],
@@ -382,7 +390,7 @@ export default function MyOrdersPage() {
               <h1 className="text-2xl font-semibold">My Orders</h1>
               <p className="mt-1 text-sm text-gray-300">Status updates refresh automatically every few seconds.</p>
             </div>
-            <Link href="/" className="app-text-accent text-sm hover:underline">
+            <Link href="/menu" className="app-text-accent text-sm hover:underline">
               Back to menu
             </Link>
           </div>

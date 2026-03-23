@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { IoIosLogOut } from "react-icons/io";
 import { CiHome } from "react-icons/ci";
-import { FiEdit3, FiMail, FiPieChart, FiSettings } from "react-icons/fi";
+import { FiEdit3, FiClipboard, FiMail, FiPieChart, FiSettings } from "react-icons/fi";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function AdminSideRail() {
@@ -23,7 +23,7 @@ export default function AdminSideRail() {
         <div className="app-bg-logo rounded-xl p-3 text-xl text-[#ea7c69]">
           <FiPieChart />
         </div>
-        <Link href="/" className="rounded-xl p-3 text-xl text-[#ea7c69]" aria-label="Back to dashboard home">
+        <Link href="/menu" className="rounded-xl p-3 text-xl text-[#ea7c69]" aria-label="Back to dashboard home">
           <CiHome />
         </Link>
         <Link
@@ -44,6 +44,13 @@ export default function AdminSideRail() {
           href="/admin/orders"
           className={`rounded-xl p-3 text-xl ${pathname === "/admin/orders" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
           aria-label="Open orders page"
+        >
+          <FiClipboard />
+        </Link>
+        <Link
+          href="/admin/messages"
+          className={`rounded-xl p-3 text-xl ${pathname === "/admin/messages" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
+          aria-label="Open messages page"
         >
           <FiMail />
         </Link>

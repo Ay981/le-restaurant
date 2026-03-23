@@ -104,6 +104,17 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
           .map(([title]) => title);
 
         setPersonalizedDishes(top);
+      } catch (error) {
+        console.error("loadPersonalizedData failed", {
+          source: "RecommendationChat",
+          client: "createBrowserSupabaseClient",
+          error,
+        });
+
+        if (!mounted) return;
+
+        setPersonalizedDishes([]);
+        setIsAuthenticated(false);
       } finally {
         if (mounted) {
           setIsLoadingPreferences(false);

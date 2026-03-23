@@ -51,7 +51,7 @@ export default function Page() {
       }
 
       if (data.session) {
-        router.replace("/");
+        router.replace("/menu");
         return;
       }
 

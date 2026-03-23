@@ -14,13 +14,13 @@ export default function Page() {
 
   const getNextPath = () => {
     if (typeof window === "undefined") {
-      return "/";
+      return "/menu";
     }
 
     const nextValue = new URLSearchParams(window.location.search).get("next");
 
     if (!nextValue || typeof nextValue !== "string") {
-      return "/";
+      return "/menu";
     }
 
     const sanitizedNext = nextValue.trim();
@@ -30,7 +30,7 @@ export default function Page() {
       !sanitizedNext.includes("://") &&
       !/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(sanitizedNext);
 
-    return isValidRelativePath ? sanitizedNext : "/";
+    return isValidRelativePath ? sanitizedNext : "/menu";
   };
 
   useEffect(() => {

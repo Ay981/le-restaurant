@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         return;
       }
 
-      if (isStaff && pathname !== "/admin/orders") {
+      if (isStaff && pathname !== "/admin/orders" && pathname !== "/admin/messages") {
         router.replace("/admin/orders");
         return;
       }
@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <p className="mt-2 text-sm text-gray-300">Only admin and staff accounts can access this section.</p>
           {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}
           <div className="mt-4">
-            <Link href="/" className="app-text-accent hover:underline">
+            <Link href="/menu" className="app-text-accent hover:underline">
               Back to dashboard
             </Link>
           </div>

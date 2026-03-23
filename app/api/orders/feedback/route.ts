@@ -35,15 +35,21 @@ export async function GET(request: Request) {
 
     const supabase = createSupabaseAdminClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("order_feedback")
       .select("id, order_id, customer_user_id, comment, status, admin_note, resolved_at, created_at, updated_at")
-      .eq("customer_user_id", authResult.userId)
       .in("order_id", orderIds)
       .order("updated_at", { ascending: false });
 
+    if (authResult.role === "customer") {
+      query = query.eq("customer_user_id", authResult.userId);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
+      console.error("Failed to query order feedback", { error, userId: authResult.userId, role: authResult.role });
+      return NextResponse.json({ message: "Unable to process feedback." }, { status: 400 });
     }
 
     const feedback = ((data ?? []) as FeedbackRow[]).map((row) => ({

@@ -12,7 +12,7 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { icon: CiHome, href: "/" },
+  { icon: CiHome, href: "/menu" },
   { icon: FiUserPlus, href: "/create-account" },
   { icon: FiLogIn, href: "/sign-in" },
   { icon: CiDiscount1, href: "/discounts" },
