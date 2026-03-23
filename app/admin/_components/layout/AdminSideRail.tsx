@@ -72,7 +72,7 @@ export default function AdminSideRail() {
   ];
 
   const leftMobileLinks = mobilePrimaryLinks.filter((link) => ["/menu", "/admin/orders"].includes(link.href));
-  const rightMobileLinks = mobilePrimaryLinks.filter((link) => ["/admin/messages", "/admin/settings"].includes(link.href));
+  const rightMobileLinks = mobilePrimaryLinks.filter((link) => ["/admin/messages"].includes(link.href));
 
   const renderLink = (item: RailLink, compact = false) => {
     const Icon = item.icon;
