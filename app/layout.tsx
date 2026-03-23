@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
-import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import RouteLanguageSwitcher from "@/components/i18n/RouteLanguageSwitcher";
 import { t } from "@/lib/i18n/messages";
 import { getServerLocale } from "@/lib/i18n/server";
 import "./globals.css";
@@ -32,18 +32,16 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} app-bg-main text-white antialiased`}
       >
         <I18nProvider locale={locale}>
           {children}
-          <div className="fixed right-3 top-3 z-[70] md:right-4 md:top-4">
-            <LanguageSwitcher
-              locale={locale}
-              label={t(locale, "common", "languageLabel")}
-              englishLabel={t(locale, "common", "languageEnglish")}
-              amharicLabel={t(locale, "common", "languageAmharic")}
-            />
-          </div>
+          <RouteLanguageSwitcher
+            locale={locale}
+            label={t(locale, "common", "languageLabel")}
+            englishLabel={t(locale, "common", "languageEnglish")}
+            amharicLabel={t(locale, "common", "languageAmharic")}
+          />
         </I18nProvider>
         <Analytics />
       </body>

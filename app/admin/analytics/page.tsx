@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { FiDownload } from "react-icons/fi";
+import { toJpeg } from "html-to-image";
+import { jsPDF } from "jspdf";
 import AnalyticsSkeleton from "../_components/skeletons/AnalyticsSkeleton";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -176,7 +178,9 @@ function getTrendStats(currentValue: number, previousValue: number): TrendStats 
 export default function AdminAnalyticsPage() {
   const { locale } = useI18n();
   const isAmharic = locale === "am";
+  const reportRef = useRef<HTMLElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderAnalyticsRow[]>([]);
   const [dishes, setDishes] = useState<DishLiteRow[]>([]);
@@ -331,26 +335,68 @@ export default function AdminAnalyticsPage() {
     };
   }, [dishes, orders, range]);
 
-  const downloadReport = () => {
-    const header = ["Order Number", "Order Type", "Status", "Total", "Created At"];
-    const rows = analytics.filtered.map((order) => [
-      order.order_number,
-      order.order_type,
-      order.status,
-      String(Number(order.total || 0)),
-      order.created_at,
-    ]);
+  const downloadReport = async () => {
+    if (!reportRef.current || isExporting) {
+      return;
+    }
 
-    const csv = [header, ...rows].map((line) => line.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `sales-report-${range}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setIsExporting(true);
+    setErrorMessage(null);
+
+    try {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+
+      const width = reportRef.current.scrollWidth;
+      const height = reportRef.current.scrollHeight;
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+      const imageData = await toJpeg(reportRef.current, {
+        cacheBust: true,
+        quality: 0.96,
+        skipFonts: true,
+        pixelRatio,
+        width,
+        height,
+        canvasWidth: width,
+        canvasHeight: height,
+        backgroundColor: "#1f1d2b",
+      });
+
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const printableWidth = pageWidth - margin * 2;
+      const printableHeight = pageHeight - margin * 2;
+
+      const imageWidth = printableWidth;
+      const imageHeight = (height * imageWidth) / width;
+
+      let remainingHeight = imageHeight;
+      let positionY = margin;
+
+      pdf.addImage(imageData, "PNG", margin, positionY, imageWidth, imageHeight, undefined, "FAST");
+      remainingHeight -= printableHeight;
+
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        positionY = margin - (imageHeight - remainingHeight);
+        pdf.addImage(imageData, "JPEG", margin, positionY, imageWidth, imageHeight, undefined, "FAST");
+        remainingHeight -= printableHeight;
+      }
+
+      pdf.save(`analytics-report-${range}.pdf`);
+    } catch (error) {
+      console.error("PDF export failed", error);
+      setErrorMessage(
+        isAmharic
+          ? "ሪፖርቱን እንደ PDF መላክ አልተቻለም። እንደገና ይሞክሩ።"
+          : "Could not export the report as PDF. Please try again.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -358,7 +404,7 @@ export default function AdminAnalyticsPage() {
   }
 
   return (
-    <section className="space-y-4 text-sm">
+    <section ref={reportRef} className="space-y-4 text-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-white">{isAmharic ? "የሬስቶራንት ሽያጭ ሪፖርቶች" : "Restaurant Sales Reports"}</h1>
@@ -380,10 +426,11 @@ export default function AdminAnalyticsPage() {
           <button
             type="button"
             onClick={downloadReport}
+            disabled={isExporting}
             className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100"
           >
             <FiDownload />
-            {isAmharic ? "ሪፖርት አስቀምጥ" : "Save Report"}
+            {isExporting ? (isAmharic ? "PDF በመፍጠር ላይ..." : "Generating PDF...") : isAmharic ? "PDF ሪፖርት አውርድ" : "Download PDF Report"}
           </button>
         </div>
       </header>
@@ -441,10 +488,11 @@ export default function AdminAnalyticsPage() {
             <button
               type="button"
               onClick={downloadReport}
+              disabled={isExporting}
               className="app-hover-accent-soft inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-100"
             >
               <FiDownload />
-              {isAmharic ? "ሪፖርት አስቀምጥ" : "Save Report"}
+              {isExporting ? (isAmharic ? "PDF በመፍጠር ላይ..." : "Generating PDF...") : isAmharic ? "PDF ሪፖርት አውርድ" : "Download PDF Report"}
             </button>
           </div>
 

@@ -20,7 +20,7 @@ export default function LanguageSwitcher({ locale, label, englishLabel, amharicL
   }, [locale]);
 
   return (
-    <label className="flex items-center gap-2 text-xs text-gray-300">
+    <label className="app-bg-panel flex items-center gap-2 rounded-xl border border-white/10 px-2 py-1.5 text-xs text-gray-200 shadow-sm">
       <span>{label}</span>
       <select
         value={selected}
