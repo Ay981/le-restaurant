@@ -5,7 +5,7 @@ import type { ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { IoIosLogOut } from "react-icons/io";
 import { CiHome } from "react-icons/ci";
-import { FiEdit3, FiClipboard, FiMail, FiPieChart, FiPlus, FiSettings } from "react-icons/fi";
+import { FiEdit3, FiClipboard, FiMail, FiPieChart, FiPlus } from "react-icons/fi";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useI18n } from "@/components/i18n/I18nProvider";
 
@@ -82,7 +82,7 @@ export default function AdminSideRail() {
       <Link
         key={item.href}
         href={item.href}
-        className={`rounded-xl ${compact ? "p-2.5" : "p-3"} text-xl transition-colors ${isActive ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
+        className={`rounded-xl ${compact ? "p-2" : "p-3"} text-xl transition-colors ${compact ? isActive ? "app-text-accent" : "text-[#ea7c69]/70" : isActive ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
         aria-label={isAmharic ? item.labelAm : item.labelEn}
       >
         <Icon />
@@ -103,13 +103,6 @@ export default function AdminSideRail() {
           {desktopLinks.map((link) => renderLink(link))}
         </div>
         <div className="flex items-center gap-2 lg:flex-col">
-          <Link
-            href="/admin/settings"
-            className={`rounded-xl p-3 text-xl ${pathname === "/admin/settings" ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
-            aria-label={isAmharic ? "ቅንብሮችን ክፈት" : "Open settings"}
-          >
-            <FiSettings />
-          </Link>
           <button
             type="button"
             onClick={() => {

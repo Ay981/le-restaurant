@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type VerificationState = {
   verified: boolean;
@@ -56,6 +57,21 @@ export default function TransactionUpload({
     onVerificationChange({ verified: false, message: isAmharic ? "ደረሰኝን በማረጋገጥ ላይ..." : "Verifying receipt..." });
 
     try {
+      const supabase = createBrowserSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        const message = isAmharic
+          ? "ደረሰኝ ለማረጋገጥ እባክዎ መጀመሪያ ይግቡ።"
+          : "Please sign in before verifying a receipt.";
+
+        setStatusMessage(message);
+        onVerificationChange({ verified: false, message });
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file, file.name);
       formData.append("orderNumber", orderNumber);
@@ -69,6 +85,9 @@ export default function TransactionUpload({
 
       const response = await fetch("/api/payments/verify-receipt", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 

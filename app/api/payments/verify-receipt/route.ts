@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireRoleAccess } from "@/lib/supabase/admin-route-auth";
 import { uploadPaymentReceipt } from "@/lib/supabase/payment-receipt-upload";
 import {
   DEFAULT_IMAGE_VERIFICATION_ENDPOINT,
@@ -29,7 +30,26 @@ import {
 } from "./_lib/helpers";
 import type { VerifyResponse } from "./_lib/types";
 
+type OrderLookupRow = {
+  id: string;
+  order_number: string;
+  customer_user_id: string | null;
+  total: number | null;
+};
+
 export async function POST(request: Request) {
+  const authResult = await requireRoleAccess(request, ["customer", "admin", "staff"]);
+  if (!authResult.ok) {
+    return NextResponse.json(
+      {
+        verified: false,
+        message: authResult.message,
+        transactionReference: null,
+      } satisfies VerifyResponse,
+      { status: authResult.status },
+    );
+  }
+
   const { key: verificationApiKey } = resolveVerificationApiKey();
   const configuredImageEndpoint = normalizeEndpoint(
     process.env.RECEIPT_VERIFY_URL ?? DEFAULT_IMAGE_VERIFICATION_ENDPOINT,
@@ -57,7 +77,6 @@ export async function POST(request: Request) {
     const file = formData.get("file");
     const orderNumberValue = formData.get("orderNumber");
     const expectedAmountValue = formData.get("expectedAmount");
-    const expectedReceiverValue = formData.get("expectedReceiver");
     const accountSuffixValue = formData.get("accountSuffix");
     const manualReferenceValue = formData.get("transactionReference");
 
@@ -103,25 +122,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderNumber =
-      typeof orderNumberValue === "string" && orderNumberValue.trim().length > 0
-        ? orderNumberValue.trim()
-        : "UNKNOWN";
+    const orderNumber = typeof orderNumberValue === "string" ? orderNumberValue.trim() : "";
 
     const expectedAmount = toNumeric(expectedAmountValue);
     const accountSuffix =
       typeof accountSuffixValue === "string" && accountSuffixValue.trim().length > 0
         ? accountSuffixValue.trim()
         : null;
-    const expectedReceiverFromRequest =
-      typeof expectedReceiverValue === "string" && expectedReceiverValue.trim().length > 0
-        ? expectedReceiverValue.trim()
-        : null;
     const expectedReceiverFromEnv = firstNonEmptyString([
       process.env.RECEIPT_VERIFY_EXPECTED_RECEIVER,
       process.env.RECEIPT_EXPECTED_RECEIVER,
     ]);
-    const expectedReceiver = expectedReceiverFromRequest ?? accountSuffix ?? expectedReceiverFromEnv;
+    const trustedReceivers = (expectedReceiverFromEnv ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
     const manualReference =
       typeof manualReferenceValue === "string" && manualReferenceValue.trim().length > 0
         ? manualReferenceValue.trim().toUpperCase()
@@ -138,23 +153,88 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!expectedReceiver) {
+    if (!orderNumber) {
       return NextResponse.json(
         {
           verified: false,
-          message:
-            "Expected receiver is required. Provide account suffix in the form or set RECEIPT_VERIFY_EXPECTED_RECEIVER.",
+          message: "Order number is required for verification.",
           transactionReference: null,
         } satisfies VerifyResponse,
         { status: 400 },
       );
     }
 
+    if (trustedReceivers.length === 0) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message: "Expected receiver is required. Set RECEIPT_VERIFY_EXPECTED_RECEIVER on the server.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 400 },
+      );
+    }
+
+    const supabaseAdmin = createSupabaseAdminClient();
+
+    const { data: orderData, error: orderLookupError } = await supabaseAdmin
+      .from("orders")
+      .select("id, order_number, customer_user_id, total")
+      .eq("order_number", orderNumber)
+      .maybeSingle();
+
+    if (orderLookupError) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message: "Failed to validate order details.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 500 },
+      );
+    }
+
+    if (!orderData) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message: "Order not found.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 404 },
+      );
+    }
+
+    const order = orderData as OrderLookupRow;
+
+    if (authResult.role === "customer" && order.customer_user_id !== authResult.userId) {
+      return NextResponse.json(
+        {
+          verified: false,
+          message: "You can verify receipts only for your own orders.",
+          transactionReference: null,
+        } satisfies VerifyResponse,
+        { status: 403 },
+      );
+    }
+
+    if (typeof order.total === "number" && Number.isFinite(order.total)) {
+      const amountDelta = Math.abs(order.total - expectedAmount);
+      if (amountDelta > 0.009) {
+        return NextResponse.json(
+          {
+            verified: false,
+            message: "Expected amount does not match the order total.",
+            transactionReference: null,
+          } satisfies VerifyResponse,
+          { status: 400 },
+        );
+      }
+    }
+
     const fileArrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(fileArrayBuffer);
     const receiptHash = createHash("sha256").update(fileBuffer).digest("hex");
-
-    const supabaseAdmin = createSupabaseAdminClient();
 
     const { data: existingByHash, error: existingByHashError } = await supabaseAdmin
       .from("payment_receipt_verifications")
@@ -381,7 +461,11 @@ export async function POST(request: Request) {
     const verifiedCurrency = extractVerifiedCurrency(parsedPayload);
     const verifiedReceiver = extractVerifiedReceiver(parsedPayload);
     const amountMatchesExpected = amountsMatch(expectedAmount, verifiedAmount);
-    const receiverMatchesExpected = receiversMatch(expectedReceiver, verifiedReceiver);
+    const matchedTrustedReceiver =
+      verifiedReceiver === null
+        ? null
+        : trustedReceivers.find((receiver) => receiversMatch(receiver, verifiedReceiver)) ?? null;
+    const receiverMatchesExpected = matchedTrustedReceiver !== null;
 
     if (amountMatchesExpected !== true) {
       return NextResponse.json(
@@ -404,7 +488,7 @@ export async function POST(request: Request) {
           message:
             verifiedReceiver === null
               ? "Could not validate payment receiver from the receipt."
-              : `Receipt receiver mismatch. Expected ${expectedReceiver}, but receipt shows ${verifiedReceiver}.`,
+              : "Receipt receiver mismatch. The receipt does not target any configured business account.",
           transactionReference,
         } satisfies VerifyResponse,
         { status: 400 },
@@ -416,7 +500,7 @@ export async function POST(request: Request) {
     const { error: insertError } = await supabaseAdmin
       .from("payment_receipt_verifications")
       .insert({
-        order_number: orderNumber,
+        order_number: order.order_number,
         provider: "verify.leul.et",
         transaction_reference: transactionReference,
         receipt_hash: receiptHash,
@@ -427,7 +511,7 @@ export async function POST(request: Request) {
         verified_amount: verifiedAmount,
         verified_currency: verifiedCurrency,
         amount_matches_expected: amountMatchesExpected,
-        expected_receiver: expectedReceiver,
+        expected_receiver: matchedTrustedReceiver,
         verified_receiver: verifiedReceiver,
         receiver_matches_expected: receiverMatchesExpected,
         raw_response: parsedPayload,

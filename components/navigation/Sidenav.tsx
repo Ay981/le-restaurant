@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiPlus } from "react-icons/fi";
+import { FiClipboard } from "react-icons/fi";
 import SidenavLogo from "./SidenavLogo";
 import SidenavLogout from "./SidenavLogout";
 import SidenavNav from "./SidenavNav";
@@ -11,8 +11,8 @@ import { navItems } from "./nav-items";
 export default function Sidenav() {
   const pathname = usePathname();
   const leftDockItems = navItems.filter((item) => ["/menu", "/messages"].includes(item.href));
-  const rightDockItems = navItems.filter((item) => ["/notifications", "/admin"].includes(item.href));
-  const isCenterActive = pathname === "/orders";
+  const rightDockItems = navItems.filter((item) => ["/admin"].includes(item.href));
+  const isCenterActive = pathname === "/orders" || pathname === "/my-orders";
 
   return (
     <>
@@ -42,7 +42,7 @@ export default function Sidenav() {
             className={`absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/3 items-center justify-center rounded-full text-2xl shadow-[0_10px_22px_rgba(0,0,0,0.35)] ${isCenterActive ? "app-bg-accent text-white" : "app-bg-logo app-text-accent"}`}
             aria-label="Open orders"
           >
-            <FiPlus />
+            <FiClipboard />
           </Link>
 
           <div className="flex items-center gap-5">
@@ -55,6 +55,7 @@ export default function Sidenav() {
                 <Icon className="text-xl" />
               </Link>
             ))}
+            <SidenavLogout />
           </div>
         </aside>
       </div>

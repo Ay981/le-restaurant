@@ -93,11 +93,19 @@ export default function PaymentModal({
       } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
 
+      if (!accessToken) {
+        throw new Error(
+          isAmharic
+            ? "ክፍያን ለማጠናቀቅ እባክዎ በመጀመሪያ ይግቡ።"
+            : "Please sign in before confirming payment.",
+        );
+      }
+
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           selectedOrderType,
@@ -118,13 +126,9 @@ export default function PaymentModal({
       }
 
       setSubmitMessage(
-        session?.user?.id
-          ? isAmharic
-            ? "ክፍያው ተረጋግጧል። ይህ ትዕዛዝ ወደ ታሪክዎ ታክሏል።"
-            : "Payment confirmed. This order has been added to your history."
-          : isAmharic
-            ? "ክፍያው ተረጋግጧል። በሚቀጥለው ጊዜ በመግባት የትዕዛዝ ታሪክና የግል ምክሮች ያግኙ።"
-            : "Payment confirmed. Sign in next time to unlock order history and personalized suggestions.",
+        isAmharic
+          ? "ክፍያው ተረጋግጧል። ይህ ትዕዛዝ ወደ ታሪክዎ ታክሏል።"
+          : "Payment confirmed. This order has been added to your history.",
       );
 
       setTimeout(() => {

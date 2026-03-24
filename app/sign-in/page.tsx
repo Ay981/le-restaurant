@@ -9,6 +9,7 @@ export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -43,11 +44,22 @@ export default function Page() {
 
       if (session?.user) {
         router.replace(getNextPath());
+        return;
       }
+
+      setIsCheckingSession(false);
     };
 
     void hydrate();
   }, [router]);
+
+  if (isCheckingSession) {
+    return (
+      <main className="app-bg-main flex min-h-screen items-center justify-center px-4 text-white">
+        <p className="text-sm text-gray-300">Checking session...</p>
+      </main>
+    );
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

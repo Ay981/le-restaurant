@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { requireRoleAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type CheckoutItem = {
@@ -21,57 +21,6 @@ type CheckoutPayload = {
 };
 
 type DbOrderType = "dine_in" | "to_go" | "delivery";
-
-function getPublicSupabaseEnv() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase public env vars.");
-  }
-
-  return { supabaseUrl, supabaseAnonKey };
-}
-
-function getBearerToken(request: Request): string | null {
-  const authorizationHeader = request.headers.get("authorization");
-  if (!authorizationHeader) {
-    return null;
-  }
-
-  const [scheme, token] = authorizationHeader.split(" ");
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    return null;
-  }
-
-  return token;
-}
-
-async function getCurrentUserId(request: Request) {
-  const token = getBearerToken(request);
-  if (!token) {
-    return null;
-  }
-
-  const { supabaseUrl, supabaseAnonKey } = getPublicSupabaseEnv();
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user?.id ?? null;
-}
 
 function mapOrderTypeToDb(value: string): DbOrderType {
   const normalized = value.trim().toLowerCase();
@@ -97,6 +46,11 @@ function roundCurrency(value: number) {
 
 export async function POST(request: Request) {
   try {
+    const authResult = await requireRoleAccess(request, ["customer"]);
+    if (!authResult.ok) {
+      return NextResponse.json({ message: authResult.message }, { status: authResult.status });
+    }
+
     const body = (await request.json()) as CheckoutPayload;
 
     const items = Array.isArray(body.items) ? body.items : [];
@@ -147,7 +101,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const customerUserId = await getCurrentUserId(request);
     const orderNumber = buildOrderNumber();
     const supabase = createSupabaseAdminClient();
 
@@ -159,7 +112,7 @@ export async function POST(request: Request) {
         status: "pending",
         discount,
         subtotal,
-        customer_user_id: customerUserId,
+        customer_user_id: authResult.userId,
         delivery_address: destination || null,
         customer_name: customerName || null,
         customer_phone: customerPhone || null,
