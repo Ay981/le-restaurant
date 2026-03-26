@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 
 type VerificationState = {
   verified: boolean;
@@ -64,6 +65,7 @@ export default function TransactionUpload({
 
       setStatusMessage(message);
       onVerificationChange({ verified: false, message });
+      showErrorToast({ message });
       setIsVerifying(false);
       return;
     }
@@ -81,6 +83,7 @@ export default function TransactionUpload({
 
         setStatusMessage(message);
         onVerificationChange({ verified: false, message });
+        showErrorToast({ message });
         return;
       }
 
@@ -135,6 +138,7 @@ export default function TransactionUpload({
           transactionReference: transactionRef,
           alreadyUsed: payload.alreadyUsed,
         });
+        showErrorToast({ message });
         return;
       }
 
@@ -145,11 +149,13 @@ export default function TransactionUpload({
         message,
         transactionReference: transactionRef,
       });
+      showSuccessToast({ message });
     } catch {
       const message = isAmharic ? "ደረሰኙን ማረጋገጥ አልተቻለም። እባክዎ ደግመው ይሞክሩ።" : "Could not verify the receipt. Please try again.";
       setStatusMessage(message);
       setVerifiedReference(null);
       onVerificationChange({ verified: false, message });
+      showErrorToast({ message });
     } finally {
       setIsVerifying(false);
     }

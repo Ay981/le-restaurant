@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
+import { Toaster } from "sonner";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import RouteLanguageSwitcher from "@/components/i18n/RouteLanguageSwitcher";
 import MobileHamburgerSidebar from "@/components/navigation/MobileHamburgerSidebar";
@@ -50,6 +51,7 @@ export default async function RootLayout({
             englishLabel={t(locale, "common", "languageEnglish")}
             amharicLabel={t(locale, "common", "languageAmharic")}
           />
+          <Toaster richColors closeButton position="top-right" />
         </I18nProvider>
         <Analytics />
       </body>

@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/currency";
 import type { OrderItem, OrderSummary } from "@/lib/data";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 
 type PaymentModalProps = {
   orderItems: OrderItem[];
@@ -236,6 +237,7 @@ export default function PaymentModal({
           ? "ክፍያው ተረጋግጧል። ይህ ትዕዛዝ ወደ ታሪክዎ ታክሏል።"
           : "Payment confirmed. This order has been added to your history.",
       );
+      showSuccessToast({ message: isAmharic ? "ክፍያው ተረጋግጧል።" : "Payment confirmed." });
 
       setIsOrderFinalized(true);
 
@@ -243,7 +245,9 @@ export default function PaymentModal({
         void handleCloseModal(false);
       }, 700);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : isAmharic ? "ክፍያን ማረጋገጥ አልተቻለም።" : "Failed to confirm payment.");
+      const message = error instanceof Error ? error.message : isAmharic ? "ክፍያን ማረጋገጥ አልተቻለም።" : "Failed to confirm payment.";
+      setSubmitError(message);
+      showErrorToast({ message });
     } finally {
       setIsSavingOrder(false);
     }

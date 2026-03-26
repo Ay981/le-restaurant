@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 
 type UiOrderStatus = "pending" | "in_progress" | "delivered";
 
@@ -223,9 +224,13 @@ export default function AdminOrdersPage() {
       setOrders((previous) =>
         previous.map((order) => (order.id === orderId ? { ...order, status: payload.status ?? nextStatus } : order)),
       );
-      setSuccessMessage(isAmharic ? "የትዕዛዝ ሁኔታ ተዘምኗል።" : "Order status updated.");
+      const message = isAmharic ? "የትዕዛዝ ሁኔታ ተዘምኗል።" : "Order status updated.";
+      setSuccessMessage(message);
+      showSuccessToast({ message });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : isAmharic ? "የትዕዛዝ ሁኔታን ማዘመን አልተቻለም።" : "Failed to update order status.");
+      const message = error instanceof Error ? error.message : isAmharic ? "የትዕዛዝ ሁኔታን ማዘመን አልተቻለም።" : "Failed to update order status.";
+      setErrorMessage(message);
+      showErrorToast({ message });
     } finally {
       setUpdatingOrderId(null);
     }
@@ -262,9 +267,13 @@ export default function AdminOrdersPage() {
       setOrders((previous) =>
         previous.map((order) => (order.id === orderId ? { ...order, feedback: payload.feedback ?? null } : order)),
       );
-      setSuccessMessage(nextStatus === "resolved" ? (isAmharic ? "የደንበኛ ጉዳይ ተፈትቷል ተብሎ ተመልክቷል።" : "Customer issue marked as resolved.") : isAmharic ? "የደንበኛ ጉዳይ ዳግም ተከፍቷል።" : "Customer issue reopened.");
+      const message = nextStatus === "resolved" ? (isAmharic ? "የደንበኛ ጉዳይ ተፈትቷል ተብሎ ተመልክቷል።" : "Customer issue marked as resolved.") : isAmharic ? "የደንበኛ ጉዳይ ዳግም ተከፍቷል።" : "Customer issue reopened.";
+      setSuccessMessage(message);
+      showSuccessToast({ message });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : isAmharic ? "አስተያየትን ማዘመን አልተቻለም።" : "Failed to update feedback.");
+      const message = error instanceof Error ? error.message : isAmharic ? "አስተያየትን ማዘመን አልተቻለም።" : "Failed to update feedback.";
+      setErrorMessage(message);
+      showErrorToast({ message });
     } finally {
       setUpdatingFeedbackOrderId(null);
     }
@@ -328,9 +337,13 @@ export default function AdminOrdersPage() {
       if (wasPending) {
         setPendingReceiptReviewCount((previous) => Math.max(0, previous - 1));
       }
-      setSuccessMessage(payload.message ?? (decision === "accepted" ? (isAmharic ? "ደረሰኙ ተቀባይነት አግኝቷል።" : "Receipt accepted.") : isAmharic ? "ደረሰኙ ተቀባይነት አላገኘም።" : "Receipt rejected."));
+      const message = payload.message ?? (decision === "accepted" ? (isAmharic ? "ደረሰኙ ተቀባይነት አግኝቷል።" : "Receipt accepted.") : isAmharic ? "ደረሰኙ ተቀባይነት አላገኘም።" : "Receipt rejected.");
+      setSuccessMessage(message);
+      showSuccessToast({ message });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : isAmharic ? "የደረሰኝ ግምገማን ማዘመን አልተቻለም።" : "Failed to update receipt review.");
+      const message = error instanceof Error ? error.message : isAmharic ? "የደረሰኝ ግምገማን ማዘመን አልተቻለም።" : "Failed to update receipt review.";
+      setErrorMessage(message);
+      showErrorToast({ message });
     } finally {
       setReviewingReceiptOrderId(null);
     }

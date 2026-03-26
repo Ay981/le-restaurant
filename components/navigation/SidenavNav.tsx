@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { NavItem } from "./nav-items";
 
@@ -7,6 +10,12 @@ type SidenavNavProps = {
 };
 
 export default function SidenavNav({ pathname, items }: SidenavNavProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   return (
     <div className="mx-3 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto md:mx-0 md:mt-1 md:flex-col md:gap-4 md:overflow-visible">
       {items.map(({ icon: Icon, href }) => (
@@ -14,7 +23,7 @@ export default function SidenavNav({ pathname, items }: SidenavNavProps) {
           href={href}
           key={href}
           className={`shrink-0 rounded-xl p-2.5 transition-colors md:p-3 ${
-            pathname === href
+            isHydrated && pathname === href
               ? "app-bg-accent text-white shadow-[0_0_24px_rgba(234,124,105,0.45)]"
               : "app-text-accent app-hover-accent-soft"
           }`}
