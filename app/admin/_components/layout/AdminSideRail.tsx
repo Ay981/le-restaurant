@@ -5,7 +5,7 @@ import type { ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { IoIosLogOut } from "react-icons/io";
 import { CiHome } from "react-icons/ci";
-import { FiEdit3, FiClipboard, FiMail, FiPieChart, FiPlus } from "react-icons/fi";
+import { FiEdit3, FiClipboard, FiMail, FiPieChart } from "react-icons/fi";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { useI18n } from "@/components/i18n/I18nProvider";
 
@@ -60,21 +60,7 @@ export default function AdminSideRail() {
     },
   ];
 
-  const mobilePrimaryLinks: RailLink[] = [
-    {
-      href: "/menu",
-      icon: CiHome,
-      activeWhen: (path) => path === "/menu",
-      labelEn: "Back to dashboard home",
-      labelAm: "ወደ ዳሽቦርድ መነሻ ተመለስ",
-    },
-    ...desktopLinks,
-  ];
-
-  const leftMobileLinks = mobilePrimaryLinks.filter((link) => ["/menu", "/admin/orders"].includes(link.href));
-  const rightMobileLinks = mobilePrimaryLinks.filter((link) => ["/admin/messages"].includes(link.href));
-
-  const renderLink = (item: RailLink, compact = false) => {
+  const renderLink = (item: RailLink) => {
     const Icon = item.icon;
     const isActive = item.activeWhen(pathname);
 
@@ -82,7 +68,7 @@ export default function AdminSideRail() {
       <Link
         key={item.href}
         href={item.href}
-        className={`rounded-xl ${compact ? "p-2" : "p-3"} text-xl transition-colors ${compact ? isActive ? "app-text-accent" : "text-[#ea7c69]/70" : isActive ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
+        className={`rounded-xl p-3 text-xl transition-colors ${isActive ? "app-bg-accent text-white" : "text-[#ea7c69]"}`}
         aria-label={isAmharic ? item.labelAm : item.labelEn}
       >
         <Icon />
@@ -115,36 +101,6 @@ export default function AdminSideRail() {
           </button>
         </div>
       </aside>
-
-      <div className="lg:hidden">
-        <aside className="app-bg-panel fixed inset-x-4 bottom-3 z-40 flex h-18 items-center justify-between rounded-3xl border border-white/10 px-5 shadow-[0_10px_26px_rgba(0,0,0,0.34)]">
-          <div className="flex items-center gap-5">
-            {leftMobileLinks.map((link) => renderLink(link, true))}
-          </div>
-
-          <Link
-            href="/admin"
-            className={`absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/3 items-center justify-center rounded-full text-2xl shadow-[0_10px_22px_rgba(0,0,0,0.35)] ${pathname === "/admin" ? "app-bg-accent text-white" : "app-bg-logo app-text-accent"}`}
-            aria-label={isAmharic ? "የምርቶች አስተዳደርን ክፈት" : "Open products management"}
-          >
-            <FiPlus />
-          </Link>
-
-          <div className="flex items-center gap-5">
-            {rightMobileLinks.map((link) => renderLink(link, true))}
-            <button
-              type="button"
-              onClick={() => {
-                void handleSignOut();
-              }}
-              className="rounded-xl p-2 text-xl text-[#ea7c69]"
-              aria-label={isAmharic ? "ውጣ" : "Sign out"}
-            >
-              <IoIosLogOut />
-            </button>
-          </div>
-        </aside>
-      </div>
     </>
   );
 }

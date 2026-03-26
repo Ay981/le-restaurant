@@ -21,7 +21,7 @@ export default function RouteLanguageSwitcher({ locale, label, englishLabel, amh
   }
 
   return (
-    <div className="fixed right-3 top-3 z-70 md:right-4 md:top-4">
+    <div className="fixed right-3 top-3 z-70 hidden md:block md:right-4 md:top-4">
       <LanguageSwitcher locale={locale} label={label} englishLabel={englishLabel} amharicLabel={amharicLabel} />
     </div>
   );
