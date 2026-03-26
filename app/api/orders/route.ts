@@ -46,7 +46,7 @@ function roundCurrency(value: number) {
 
 export async function POST(request: Request) {
   try {
-    const authResult = await requireRoleAccess(request, ["customer"]);
+    const authResult = await requireRoleAccess(request, ["customer", "admin", "staff"]);
     if (!authResult.ok) {
       return NextResponse.json({ message: authResult.message }, { status: authResult.status });
     }
