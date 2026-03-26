@@ -124,35 +124,35 @@ export function extractVerifiedReceiver(payload: Record<string, unknown>): strin
   const recipient = asObject(nestedData?.recipient);
 
   return firstNonEmptyString([
-    payload.receiver,
-    payload.recipient,
-    payload.beneficiary,
-    payload.to,
-    payload.toAccount,
-    payload.to_account,
     payload.receiverAccount,
     payload.receiver_account,
     payload.beneficiaryAccount,
     payload.beneficiary_account,
-    nestedData?.receiver,
-    nestedData?.recipient,
-    nestedData?.beneficiary,
-    nestedData?.to,
-    nestedData?.toAccount,
-    nestedData?.to_account,
+    payload.toAccount,
+    payload.to_account,
+    payload.to,
+    payload.receiver,
+    payload.recipient,
+    payload.beneficiary,
     nestedData?.receiverAccount,
     nestedData?.receiver_account,
     nestedData?.beneficiaryAccount,
     nestedData?.beneficiary_account,
-    beneficiary?.name,
     beneficiary?.account,
     beneficiary?.accountNumber,
-    receiver?.name,
     receiver?.account,
     receiver?.accountNumber,
-    recipient?.name,
     recipient?.account,
     recipient?.accountNumber,
+    nestedData?.toAccount,
+    nestedData?.to_account,
+    nestedData?.to,
+    nestedData?.receiver,
+    nestedData?.recipient,
+    nestedData?.beneficiary,
+    beneficiary?.name,
+    receiver?.name,
+    recipient?.name,
   ]);
 }
 
@@ -161,7 +161,7 @@ export function amountsMatch(expectedAmount: number | null, verifiedAmount: numb
     return false;
   }
 
-  return Math.abs(expectedAmount - verifiedAmount) <= 0.01;
+  return verifiedAmount + 0.01 >= expectedAmount;
 }
 
 export function receiversMatch(expectedReceiver: string | null, verifiedReceiver: string | null): boolean {
@@ -180,7 +180,18 @@ export function receiversMatch(expectedReceiver: string | null, verifiedReceiver
   const verifiedDigits = extractDigits(normalizedVerified);
 
   if (expectedDigits.length >= 4 && verifiedDigits.length >= 4) {
-    return verifiedDigits.endsWith(expectedDigits) || normalizedVerified.includes(normalizedExpected);
+    const expectedTail4 = expectedDigits.slice(-4);
+    const verifiedTail4 = verifiedDigits.slice(-4);
+    const expectedTail8 = expectedDigits.slice(-8);
+    const verifiedTail8 = verifiedDigits.slice(-8);
+
+    const digitMatch =
+      verifiedDigits.endsWith(expectedDigits) ||
+      expectedDigits.endsWith(verifiedDigits) ||
+      (expectedTail8.length === 8 && verifiedTail8.length === 8 && expectedTail8 === verifiedTail8) ||
+      expectedTail4 === verifiedTail4;
+
+    return digitMatch || normalizedVerified.includes(normalizedExpected) || normalizedExpected.includes(normalizedVerified);
   }
 
   return normalizedVerified.includes(normalizedExpected);

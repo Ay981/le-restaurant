@@ -219,12 +219,11 @@ export async function POST(request: Request) {
     }
 
     if (typeof order.total === "number" && Number.isFinite(order.total)) {
-      const amountDelta = Math.abs(order.total - expectedAmount);
-      if (amountDelta > 0.009) {
+      if (expectedAmount + 0.009 < order.total) {
         return NextResponse.json(
           {
             verified: false,
-            message: "Expected amount does not match the order total.",
+            message: "Expected amount cannot be less than the order total.",
             transactionReference: null,
           } satisfies VerifyResponse,
           { status: 400 },
@@ -287,6 +286,7 @@ export async function POST(request: Request) {
       };
 
       if (manualReference.startsWith("FT") && accountSuffix) {
+        universalPayload.accountSuffix = accountSuffix;
         universalPayload.suffix = accountSuffix;
       }
 
@@ -329,6 +329,7 @@ export async function POST(request: Request) {
             attemptPayload.append("expectedAmount", expectedAmount.toString());
           }
           if (accountSuffix) {
+            attemptPayload.append("accountSuffix", accountSuffix);
             attemptPayload.append("suffix", accountSuffix);
           }
 
@@ -461,11 +462,25 @@ export async function POST(request: Request) {
     const verifiedCurrency = extractVerifiedCurrency(parsedPayload);
     const verifiedReceiver = extractVerifiedReceiver(parsedPayload);
     const amountMatchesExpected = amountsMatch(expectedAmount, verifiedAmount);
-    const matchedTrustedReceiver =
+    const matchedTrustedReceiverFromPayload =
       verifiedReceiver === null
         ? null
         : trustedReceivers.find((receiver) => receiversMatch(receiver, verifiedReceiver)) ?? null;
+    const normalizedAccountSuffix = (accountSuffix ?? "").replace(/\D/g, "");
+    const matchedTrustedReceiverFromSuffix =
+      normalizedAccountSuffix.length >= 4
+        ? trustedReceivers.find((receiver) => {
+            const configuredDigits = receiver.replace(/\D/g, "");
+            if (configuredDigits.length < 4) {
+              return false;
+            }
+
+            return configuredDigits.endsWith(normalizedAccountSuffix) || normalizedAccountSuffix.endsWith(configuredDigits);
+          }) ?? null
+        : null;
+    const matchedTrustedReceiver = matchedTrustedReceiverFromPayload ?? matchedTrustedReceiverFromSuffix;
     const receiverMatchesExpected = matchedTrustedReceiver !== null;
+    const shouldReturnReceiverDebug = process.env.NODE_ENV !== "production";
 
     if (amountMatchesExpected !== true) {
       return NextResponse.json(
@@ -474,7 +489,7 @@ export async function POST(request: Request) {
           message:
             verifiedAmount === null
               ? "Could not validate payment amount from the receipt."
-              : `Receipt amount mismatch. Expected ${expectedAmount.toFixed(2)}, but receipt shows ${verifiedAmount.toFixed(2)}.`,
+              : `Receipt amount is below the required minimum. Expected at least ${expectedAmount.toFixed(2)}, but receipt shows ${verifiedAmount.toFixed(2)}.`,
           transactionReference,
         } satisfies VerifyResponse,
         { status: 400 },
@@ -482,6 +497,11 @@ export async function POST(request: Request) {
     }
 
     if (receiverMatchesExpected !== true) {
+      const verifiedReceiverDigits = verifiedReceiver ? verifiedReceiver.replace(/\D/g, "") : null;
+      const verifiedReceiverLast4 = verifiedReceiverDigits && verifiedReceiverDigits.length >= 4
+        ? verifiedReceiverDigits.slice(-4)
+        : null;
+
       return NextResponse.json(
         {
           verified: false,
@@ -490,6 +510,20 @@ export async function POST(request: Request) {
               ? "Could not validate payment receiver from the receipt."
               : "Receipt receiver mismatch. The receipt does not target any configured business account.",
           transactionReference,
+          receiverDebug: shouldReturnReceiverDebug
+            ? {
+                extractedReceiver: verifiedReceiver,
+                extractedReceiverDigits: verifiedReceiverDigits,
+                extractedReceiverLast4: verifiedReceiverLast4,
+                configuredReceivers: trustedReceivers,
+                configuredReceiverLast4: trustedReceivers
+                  .map((receiver) => receiver.replace(/\D/g, ""))
+                  .filter((digits) => digits.length >= 4)
+                  .map((digits) => digits.slice(-4)),
+                providedAccountSuffix: normalizedAccountSuffix || null,
+                matchedViaSuffix: matchedTrustedReceiverFromSuffix !== null,
+              }
+            : undefined,
         } satisfies VerifyResponse,
         { status: 400 },
       );
@@ -497,7 +531,7 @@ export async function POST(request: Request) {
 
     const uploadedReceipt = await uploadPaymentReceipt(file, orderNumber);
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: savedVerification, error: insertError } = await supabaseAdmin
       .from("payment_receipt_verifications")
       .insert({
         order_number: order.order_number,
@@ -515,7 +549,9 @@ export async function POST(request: Request) {
         verified_receiver: verifiedReceiver,
         receiver_matches_expected: receiverMatchesExpected,
         raw_response: parsedPayload,
-      });
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       const message = insertError.message.toLowerCase();
@@ -542,6 +578,23 @@ export async function POST(request: Request) {
         } satisfies VerifyResponse,
         { status: 500 },
       );
+    }
+
+    if (savedVerification?.id) {
+      const { error: staffNotificationError } = await supabaseAdmin.from("staff_order_notifications").insert({
+        order_id: order.id,
+        receipt_verification_id: savedVerification.id,
+        title: "Receipt review required",
+        message: `Order ${order.order_number} has a newly uploaded receipt waiting for review.`,
+      });
+
+      if (staffNotificationError) {
+        console.error("Non-fatal staff notification insertion failure in receipt verification", {
+          orderId: order.id,
+          receiptVerificationId: savedVerification.id,
+          staffNotificationError,
+        });
+      }
     }
 
     return NextResponse.json(

@@ -44,6 +44,10 @@ type ReceiptRow = {
   verified_receiver: string | null;
   amount_matches_expected: boolean | null;
   receiver_matches_expected: boolean | null;
+  review_status: "pending" | "accepted" | "rejected";
+  review_note: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
   created_at: string;
 };
 
@@ -152,6 +156,10 @@ export async function GET(request: Request) {
       verifiedReceiver: string | null;
       amountMatchesExpected: boolean | null;
       receiverMatchesExpected: boolean | null;
+      reviewStatus: "pending" | "accepted" | "rejected";
+      reviewNote: string | null;
+      reviewedAt: string | null;
+      reviewedBy: string | null;
       verifiedAt: string;
     }>();
 
@@ -167,7 +175,7 @@ export async function GET(request: Request) {
     if (orderNumbers.length > 0) {
       const { data: receiptsData, error: receiptsError } = await supabase
         .from("payment_receipt_verifications")
-        .select("order_number, provider, transaction_reference, receipt_file_path, receipt_file_name, receipt_mime_type, expected_amount, verified_amount, verified_currency, expected_receiver, verified_receiver, amount_matches_expected, receiver_matches_expected, created_at")
+        .select("order_number, provider, transaction_reference, receipt_file_path, receipt_file_name, receipt_mime_type, expected_amount, verified_amount, verified_currency, expected_receiver, verified_receiver, amount_matches_expected, receiver_matches_expected, review_status, review_note, reviewed_at, reviewed_by, created_at")
         .in("order_number", orderNumbers)
         .order("created_at", { ascending: false });
 
@@ -191,12 +199,16 @@ export async function GET(request: Request) {
             verifiedReceiver: receipt.verified_receiver,
             amountMatchesExpected: receipt.amount_matches_expected,
             receiverMatchesExpected: receipt.receiver_matches_expected,
+            reviewStatus: receipt.review_status,
+            reviewNote: receipt.review_note,
+            reviewedAt: receipt.reviewed_at,
+            reviewedBy: receipt.reviewed_by,
             verifiedAt: receipt.created_at,
           });
         }
 
         return accumulator;
-      }, new Map<string, { provider: string; transactionReference: string; filePath: string | null; fileName: string | null; fileMimeType: string | null; expectedAmount: number | null; verifiedAmount: number | null; verifiedCurrency: string | null; expectedReceiver: string | null; verifiedReceiver: string | null; amountMatchesExpected: boolean | null; receiverMatchesExpected: boolean | null; verifiedAt: string }>());
+      }, new Map<string, { provider: string; transactionReference: string; filePath: string | null; fileName: string | null; fileMimeType: string | null; expectedAmount: number | null; verifiedAmount: number | null; verifiedCurrency: string | null; expectedReceiver: string | null; verifiedReceiver: string | null; amountMatchesExpected: boolean | null; receiverMatchesExpected: boolean | null; reviewStatus: "pending" | "accepted" | "rejected"; reviewNote: string | null; reviewedAt: string | null; reviewedBy: string | null; verifiedAt: string }>());
     }
 
     const receiptFilePathToSignedUrl = new Map<string, string>();
@@ -283,14 +295,30 @@ export async function GET(request: Request) {
           verifiedReceiver: receipt.verifiedReceiver,
           amountMatchesExpected: receipt.amountMatchesExpected,
           receiverMatchesExpected: receipt.receiverMatchesExpected,
+          reviewStatus: receipt.reviewStatus,
+          reviewNote: receipt.reviewNote,
+          reviewedAt: receipt.reviewedAt,
+          reviewedBy: receipt.reviewedBy,
           verifiedAt: receipt.verifiedAt,
         };
       })(),
       feedback: feedbackByOrderId.get(order.id) ?? null,
     }));
 
+    const { count: pendingReceiptReviewCount, error: pendingReceiptReviewError } = await supabase
+      .from("staff_order_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("action_status", "pending");
+
+    if (pendingReceiptReviewError) {
+      return NextResponse.json({ message: pendingReceiptReviewError.message }, { status: 400 });
+    }
+
     return NextResponse.json({
       orders,
+      alerts: {
+        pendingReceiptReviews: pendingReceiptReviewCount ?? 0,
+      },
       pagination: {
         page,
         pageSize,

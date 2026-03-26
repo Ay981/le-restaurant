@@ -98,6 +98,39 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    if (currentStatus === "pending" && nextStatus === "in_progress") {
+      const { data: latestReceiptReview, error: latestReceiptReviewError } = await supabase
+        .from("payment_receipt_verifications")
+        .select("review_status")
+        .eq("order_number", currentOrder.order_number)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestReceiptReviewError) {
+        return NextResponse.json({ message: latestReceiptReviewError.message }, { status: 400 });
+      }
+
+      if (!latestReceiptReview) {
+        return NextResponse.json(
+          { message: "A verified receipt is required before moving this order to in progress." },
+          { status: 400 },
+        );
+      }
+
+      if (latestReceiptReview.review_status !== "accepted") {
+        return NextResponse.json(
+          {
+            message:
+              latestReceiptReview.review_status === "rejected"
+                ? "The latest receipt was rejected. Upload and approve a valid receipt before continuing."
+                : "The latest receipt is still pending staff review. Accept or reject it first.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const nowIso = new Date().toISOString();
     const nextDbStatus = toDbStatus(nextStatus);
     const updatePayload: {

@@ -56,6 +56,18 @@ export default function TransactionUpload({
     setVerifiedReference(null);
     onVerificationChange({ verified: false, message: isAmharic ? "ደረሰኝን በማረጋገጥ ላይ..." : "Verifying receipt..." });
 
+    const normalizedOrderNumber = orderNumber.trim();
+    if (!normalizedOrderNumber || normalizedOrderNumber === "UNKNOWN") {
+      const message = isAmharic
+        ? "እባክዎ መጀመሪያ ትክክለኛ ትዕዛዝ እንዲፈጠር ይጠብቁ።"
+        : "Please wait until a valid order is created before verifying the receipt.";
+
+      setStatusMessage(message);
+      onVerificationChange({ verified: false, message });
+      setIsVerifying(false);
+      return;
+    }
+
     try {
       const supabase = createBrowserSupabaseClient();
       const {
@@ -74,7 +86,7 @@ export default function TransactionUpload({
 
       const formData = new FormData();
       formData.append("file", file, file.name);
-      formData.append("orderNumber", orderNumber);
+      formData.append("orderNumber", normalizedOrderNumber);
       formData.append("expectedAmount", expectedAmount.toString());
       if (accountSuffix.trim().length > 0) {
         formData.append("accountSuffix", accountSuffix.trim());
@@ -96,9 +108,20 @@ export default function TransactionUpload({
         message?: string;
         transactionReference?: string | null;
         alreadyUsed?: boolean;
+        receiverDebug?: {
+          extractedReceiver: string | null;
+          extractedReceiverDigits: string | null;
+          extractedReceiverLast4: string | null;
+          configuredReceivers: string[];
+          configuredReceiverLast4: string[];
+        };
       };
 
-      const message = payload.message ?? (response.ok ? "Receipt verified." : "Verification failed.");
+      const baseMessage = payload.message ?? (response.ok ? "Receipt verified." : "Verification failed.");
+      const debugSuffix = payload.receiverDebug
+        ? ` [debug: extractedLast4=${payload.receiverDebug.extractedReceiverLast4 ?? "n/a"}; configuredLast4=${payload.receiverDebug.configuredReceiverLast4.join(",") || "n/a"}]`
+        : "";
+      const message = `${baseMessage}${debugSuffix}`;
       const transactionRef = payload.transactionReference ?? null;
 
       if (!response.ok || !payload.verified) {

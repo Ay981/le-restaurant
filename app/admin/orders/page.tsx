@@ -40,6 +40,10 @@ type AdminOrder = {
     verifiedReceiver: string | null;
     amountMatchesExpected: boolean | null;
     receiverMatchesExpected: boolean | null;
+    reviewStatus: "pending" | "accepted" | "rejected";
+    reviewNote: string | null;
+    reviewedAt: string | null;
+    reviewedBy: string | null;
     verifiedAt: string;
   } | null;
   feedback?: {
@@ -54,6 +58,9 @@ type AdminOrder = {
 
 type OrdersResponse = {
   orders?: AdminOrder[];
+  alerts?: {
+    pendingReceiptReviews: number;
+  };
   pagination?: {
     page: number;
     pageSize: number;
@@ -146,6 +153,9 @@ export default function AdminOrdersPage() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [feedbackNotes, setFeedbackNotes] = useState<Record<string, string>>({});
   const [updatingFeedbackOrderId, setUpdatingFeedbackOrderId] = useState<string | null>(null);
+  const [receiptReviewNotes, setReceiptReviewNotes] = useState<Record<string, string>>({});
+  const [reviewingReceiptOrderId, setReviewingReceiptOrderId] = useState<string | null>(null);
+  const [pendingReceiptReviewCount, setPendingReceiptReviewCount] = useState(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -211,6 +221,7 @@ export default function AdminOrdersPage() {
       }
 
       setOrders(liveOrders);
+      setPendingReceiptReviewCount(payload.alerts?.pendingReceiptReviews ?? 0);
       setPagination(
         payload.pagination ?? {
           page,
@@ -223,6 +234,7 @@ export default function AdminOrdersPage() {
     } catch (error) {
       setOrders(MOCK_ORDERS);
       setIsUsingMockData(true);
+      setPendingReceiptReviewCount(0);
       setPagination({ page: 1, pageSize, total: MOCK_ORDERS.length, totalPages: 1 });
       setInfoMessage(isAmharic ? "የቀጥታ ትዕዛዞች አይገኙም። ለሙከራ ናሙና ውሂብ ታይቷል።" : "Live orders are unavailable. Showing mock data for testing.");
       setErrorMessage(error instanceof Error ? error.message : isAmharic ? "ትዕዛዞችን መጫን አልተቻለም።" : "Failed to load orders.");
@@ -317,6 +329,77 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleReceiptDecision = async (orderId: string, decision: "accepted" | "rejected") => {
+    if (isUsingMockData) {
+      setSuccessMessage(isAmharic ? "በናሙና ሁኔታ ውስጥ የደረሰኝ ግምገማ እርምጃዎች ተሰናክለዋል።" : "Receipt review actions are disabled in mock mode.");
+      return;
+    }
+
+    setReviewingReceiptOrderId(orderId);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const wasPending = orders.find((order) => order.id === orderId)?.receipt?.reviewStatus === "pending";
+      const accessToken = await getAccessToken();
+      const response = await fetch(`/api/admin/orders/${orderId}/receipt-review`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          decision,
+          note: receiptReviewNotes[orderId] ?? "",
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        receiptReview?: {
+          status: "accepted" | "rejected";
+          note: string | null;
+          reviewedAt: string;
+          reviewedBy: string;
+        };
+        message?: string;
+      };
+
+      if (!response.ok || !payload.receiptReview) {
+        throw new Error(payload.message ?? (isAmharic ? "የደረሰኝ ግምገማን ማዘመን አልተቻለም።" : "Failed to update receipt review."));
+      }
+
+      const receiptReview = payload.receiptReview;
+
+      setOrders((previous) =>
+        previous.map((order) => {
+          if (order.id !== orderId || !order.receipt) {
+            return order;
+          }
+
+          return {
+            ...order,
+            receipt: {
+              ...order.receipt,
+              reviewStatus: receiptReview.status,
+              reviewNote: receiptReview.note,
+              reviewedAt: receiptReview.reviewedAt,
+              reviewedBy: receiptReview.reviewedBy,
+            },
+          };
+        }),
+      );
+
+      if (wasPending) {
+        setPendingReceiptReviewCount((previous) => Math.max(0, previous - 1));
+      }
+      setSuccessMessage(payload.message ?? (decision === "accepted" ? (isAmharic ? "ደረሰኙ ተቀባይነት አግኝቷል።" : "Receipt accepted.") : isAmharic ? "ደረሰኙ ተቀባይነት አላገኘም።" : "Receipt rejected."));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : isAmharic ? "የደረሰኝ ግምገማን ማዘመን አልተቻለም።" : "Failed to update receipt review.");
+    } finally {
+      setReviewingReceiptOrderId(null);
+    }
+  };
+
   const totals = useMemo(() => {
     const pending = orders.filter((order) => order.status === "pending").length;
     const inProgress = orders.filter((order) => order.status === "in_progress").length;
@@ -331,6 +414,11 @@ export default function AdminOrdersPage() {
         <div>
           <h1 className="text-2xl font-semibold text-white">{isAmharic ? "የአሁኑ ትዕዛዞች" : "Current Orders"}</h1>
           <p className="mt-1 text-sm text-gray-300">{isAmharic ? "የቀጥታ ትዕዛዝ ሁኔታን ከመጠባበቅ እስከ መድረስ ያስተዳድሩ።" : "Manage live order status from pending to delivered."}</p>
+          {pendingReceiptReviewCount > 0 ? (
+            <p className="mt-2 inline-flex rounded-full border border-amber-300/40 bg-amber-500/10 px-3 py-1 text-xs text-amber-200">
+              {isAmharic ? `${pendingReceiptReviewCount} የደረሰኝ ግምገማዎች በመጠባበቅ ላይ` : `${pendingReceiptReviewCount} receipt reviews pending`}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -437,6 +525,10 @@ export default function AdminOrdersPage() {
                               ...previous,
                               [order.id]: previous[order.id] ?? order.feedback?.adminNote ?? "",
                             }));
+                            setReceiptReviewNotes((previous) => ({
+                              ...previous,
+                              [order.id]: previous[order.id] ?? order.receipt?.reviewNote ?? "",
+                            }));
                           }}
                           className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200"
                         >
@@ -489,7 +581,69 @@ export default function AdminOrdersPage() {
                                   <p className="mt-1 text-sm">
                                     {isAmharic ? "የተቀባይ ማረጋገጫ:" : "Receiver Check:"} {order.receipt.receiverMatchesExpected === null ? "N/A" : order.receipt.receiverMatchesExpected ? (isAmharic ? "ተመሳሳይ" : "Matched") : isAmharic ? "አልተመሳሰለም" : "Mismatch"}
                                   </p>
+                                  <p className="mt-1 text-sm">
+                                    {isAmharic ? "የሰራተኛ ግምገማ:" : "Staff Review:"} {order.receipt.reviewStatus === "accepted" ? (isAmharic ? "ተቀባይነት አግኝቷል" : "Accepted") : order.receipt.reviewStatus === "rejected" ? (isAmharic ? "ተቀባይነት አላገኘም" : "Rejected") : isAmharic ? "በመጠባበቅ ላይ" : "Pending"}
+                                  </p>
+                                  {order.receipt.reviewNote ? (
+                                    <p className="mt-1 text-sm">{isAmharic ? "የግምገማ ማስታወሻ:" : "Review Note:"} {order.receipt.reviewNote}</p>
+                                  ) : null}
+                                  {order.receipt.reviewedAt ? (
+                                    <p className="mt-1 text-sm">{isAmharic ? "የተገመገመበት ጊዜ:" : "Reviewed At:"} {formatDateTime(order.receipt.reviewedAt, locale)}</p>
+                                  ) : null}
                                   <p className="mt-1 text-sm">{isAmharic ? "የተረጋገጠበት ጊዜ:" : "Verified At:"} {formatDateTime(order.receipt.verifiedAt, locale)}</p>
+
+                                  {order.receipt.reviewStatus === "pending" ? (
+                                    <>
+                                      <label className="mt-3 block text-xs text-gray-400">
+                                        {isAmharic ? "የግምገማ ማስታወሻ" : "Review note"}
+                                        <textarea
+                                          value={receiptReviewNotes[order.id] ?? order.receipt.reviewNote ?? ""}
+                                          onChange={(event) =>
+                                            setReceiptReviewNotes((previous) => ({
+                                              ...previous,
+                                              [order.id]: event.target.value,
+                                            }))
+                                          }
+                                          rows={2}
+                                          className="app-bg-elevated mt-2 w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100 outline-none"
+                                          placeholder={isAmharic ? "ለተቀባይነት / ውድቅ አስተያየት ይጨምሩ" : "Optional note for acceptance/rejection"}
+                                        />
+                                      </label>
+
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            void handleReceiptDecision(order.id, "accepted");
+                                          }}
+                                          disabled={reviewingReceiptOrderId === order.id}
+                                          className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                          {isAmharic ? "ተቀበል" : "Accept"}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            void handleReceiptDecision(order.id, "rejected");
+                                          }}
+                                          disabled={reviewingReceiptOrderId === order.id}
+                                          className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                          {isAmharic ? "ውድቅ አድርግ" : "Reject"}
+                                        </button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <p className="mt-3 text-xs text-gray-400">
+                                      {order.receipt.reviewStatus === "accepted"
+                                        ? isAmharic
+                                          ? "ይህ ደረሰኝ አስቀድሞ ተቀባይነት አግኝቷል።"
+                                          : "This receipt has already been accepted."
+                                        : isAmharic
+                                          ? "ይህ ደረሰኝ አስቀድሞ ውድቅ ተደርጓል።"
+                                          : "This receipt has already been rejected."}
+                                    </p>
+                                  )}
                                 </>
                               ) : (
                                 <p className="mt-2 text-sm text-gray-400">{isAmharic ? "የደረሰኝ ማረጋገጫ አልተገኘም።" : "No receipt verification found."}</p>

@@ -36,6 +36,9 @@ export default function PaymentModal({
   const [receiptMessage, setReceiptMessage] = useState(isAmharic ? "ደረሰኝ ይጫኑ እና ያረጋግጡ።" : "Upload a receipt and verify it.");
   const [receiptReference, setReceiptReference] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [isPreparingOrder, setIsPreparingOrder] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
@@ -64,6 +67,103 @@ export default function PaymentModal({
     };
   }, [onClose]);
 
+  const createOrderRecord = async () => {
+    if (createdOrderNumber) {
+      return createdOrderNumber;
+    }
+
+    const isDelivery = selectedOrderType.trim().toLowerCase() === "delivery";
+    if (
+      isDelivery &&
+      (!deliveryDetails.destination.trim() || !deliveryDetails.customerName.trim() || !deliveryDetails.customerPhone.trim())
+    ) {
+      throw new Error(
+        isAmharic
+          ? "የዴሊቨሪ ትዕዛዝ መድረሻ፣ የደንበኛ ስም እና ስልክ ይፈልጋል።"
+          : "Delivery orders require destination, customer name, and customer phone.",
+      );
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+
+    if (!accessToken) {
+      throw new Error(
+        isAmharic
+          ? "ክፍያን ለማጠናቀቅ እባክዎ በመጀመሪያ ይግቡ።"
+          : "Please sign in before confirming payment.",
+      );
+    }
+
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        selectedOrderType,
+        discount: orderSummary.discount,
+        items: orderItems.map((item) => ({
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          note: item.note,
+        })),
+        deliveryDetails,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      id?: string;
+      orderNumber?: string;
+      message?: string;
+    };
+
+    if (!response.ok || !payload.orderNumber || !payload.id) {
+      throw new Error(payload.message ?? (isAmharic ? "የትዕዛዝ መዝገብ መፍጠር አልተቻለም።" : "Could not create order record."));
+    }
+
+    setCreatedOrderId(payload.id);
+    setCreatedOrderNumber(payload.orderNumber);
+
+    return payload.orderNumber;
+  };
+
+  useEffect(() => {
+    if (paymentMethod !== "bankTransfer" || createdOrderNumber || isPreparingOrder) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const prepareOrder = async () => {
+      setIsPreparingOrder(true);
+      setSubmitError(null);
+
+      try {
+        await createOrderRecord();
+      } catch (error) {
+        if (isMounted) {
+          setSubmitError(error instanceof Error ? error.message : isAmharic ? "የትዕዛዝ መዝገብ መፍጠር አልተቻለም።" : "Could not create order record.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsPreparingOrder(false);
+        }
+      }
+    };
+
+    void prepareOrder();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [createdOrderNumber, isAmharic, isPreparingOrder, paymentMethod]);
+
   const handleConfirmPayment = async () => {
     if (paymentMethod === "bankTransfer" && !receiptVerified) {
       return;
@@ -87,42 +187,8 @@ export default function PaymentModal({
     setIsSavingOrder(true);
 
     try {
-      const supabase = createBrowserSupabaseClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        throw new Error(
-          isAmharic
-            ? "ክፍያን ለማጠናቀቅ እባክዎ በመጀመሪያ ይግቡ።"
-            : "Please sign in before confirming payment.",
-        );
-      }
-
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          selectedOrderType,
-          discount: orderSummary.discount,
-          items: orderItems.map((item) => ({
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity,
-            note: item.note,
-          })),
-          deliveryDetails,
-        }),
-      });
-
-      const payload = (await response.json()) as { message?: string };
-      if (!response.ok) {
-        throw new Error(payload.message ?? (isAmharic ? "የትዕዛዝ መዝገብ መፍጠር አልተቻለም።" : "Could not create order record."));
+      if (!createdOrderId) {
+        await createOrderRecord();
       }
 
       setSubmitMessage(
@@ -284,7 +350,7 @@ export default function PaymentModal({
           {paymentMethod === "bankTransfer" ? (
             <>
               <TransactionUpload
-                orderNumber={orderSummary.orderNumber}
+                orderNumber={createdOrderNumber ?? "UNKNOWN"}
                 expectedAmount={orderSummary.subtotal}
                 onVerificationChange={(verification) => {
                   setReceiptVerified(verification.verified);
@@ -292,6 +358,7 @@ export default function PaymentModal({
                   setReceiptReference(verification.transactionReference ?? null);
                 }}
               />
+              {isPreparingOrder ? <p className="mt-3 text-xs text-amber-300">{isAmharic ? "ትዕዛዙ በመዘጋጀት ላይ ነው..." : "Preparing order record for receipt verification..."}</p> : null}
               <p className="mt-3 text-xs text-gray-400">
                 {receiptMessage}
                 {receiptReference ? ` (${receiptReference})` : ""}
