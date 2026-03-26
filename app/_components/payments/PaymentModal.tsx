@@ -39,6 +39,7 @@ export default function PaymentModal({
   const [isPreparingOrder, setIsPreparingOrder] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [createdOrderNumber, setCreatedOrderNumber] = useState<string | null>(null);
+  const [isOrderFinalized, setIsOrderFinalized] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
@@ -55,7 +56,7 @@ export default function PaymentModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        void handleCloseModal(true);
       }
     };
 
@@ -65,7 +66,46 @@ export default function PaymentModal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, createdOrderId, isOrderFinalized, receiptVerified, isAmharic]);
+
+  const cleanupPendingOrder = async () => {
+    if (!createdOrderId || isOrderFinalized || receiptVerified) {
+      return;
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      return;
+    }
+
+    await fetch(`/api/orders/${createdOrderId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      keepalive: true,
+    });
+  };
+
+  const handleCloseModal = async (cleanupPending: boolean) => {
+    if (cleanupPending) {
+      await cleanupPendingOrder();
+    }
+
+    onClose();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (createdOrderId && !isOrderFinalized && !receiptVerified) {
+        void cleanupPendingOrder();
+      }
+    };
+  }, [createdOrderId, isOrderFinalized, receiptVerified]);
 
   const createOrderRecord = async () => {
     if (createdOrderNumber) {
@@ -197,8 +237,10 @@ export default function PaymentModal({
           : "Payment confirmed. This order has been added to your history.",
       );
 
+      setIsOrderFinalized(true);
+
       setTimeout(() => {
-        onClose();
+        void handleCloseModal(false);
       }, 700);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : isAmharic ? "ክፍያን ማረጋገጥ አልተቻለም።" : "Failed to confirm payment.");
@@ -212,7 +254,7 @@ export default function PaymentModal({
       className="fixed inset-0 z-50 overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-[2px] md:py-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
-          onClose();
+          void handleCloseModal(true);
         }
       }}
     >
@@ -226,7 +268,9 @@ export default function PaymentModal({
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                void handleCloseModal(true);
+              }}
               className="app-bg-accent h-10 w-10 rounded-xl text-xl leading-none text-white"
               aria-label={isAmharic ? "የክፍያ ሞዳልን ዝጋ" : "Close payment modal"}
             >
@@ -370,7 +414,9 @@ export default function PaymentModal({
             <button
               type="button"
               disabled={isSavingOrder}
-              onClick={onClose}
+              onClick={() => {
+                void handleCloseModal(true);
+              }}
               className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isAmharic ? "ሰርዝ" : "Cancel"}

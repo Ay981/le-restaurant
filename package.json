@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "pnpm run test:receipt-helpers",
+    "test:receipt-helpers": "tsx --test tests/receipt-helpers.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.2",
@@ -29,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }

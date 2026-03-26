@@ -118,7 +118,9 @@ export default function TransactionUpload({
       };
 
       const baseMessage = payload.message ?? (response.ok ? "Receipt verified." : "Verification failed.");
+      const isDebugEnabled = process.env.NODE_ENV !== "production";
       const debugSuffix = payload.receiverDebug
+        && isDebugEnabled
         ? ` [debug: extractedLast4=${payload.receiverDebug.extractedReceiverLast4 ?? "n/a"}; configuredLast4=${payload.receiverDebug.configuredReceiverLast4.join(",") || "n/a"}]`
         : "";
       const message = `${baseMessage}${debugSuffix}`;

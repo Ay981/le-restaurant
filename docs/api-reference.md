@@ -205,9 +205,9 @@ POST /api/payments/verify-receipt
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `file` | File | Yes | Receipt image (JPEG, PNG, WebP, HEIC) or PDF. Max 8MB. |
-| `orderNumber` | string | No | Associated order number (default: `"UNKNOWN"`) |
-| `expectedAmount` | number | No | Expected payment amount for validation |
-| `accountSuffix` | string | No | Last digits of account number (used for FT-prefix references) |
+| `orderNumber` | string | Yes | Existing persisted order number created by checkout flow. |
+| `expectedAmount` | number | Yes | Minimum expected payment amount used for validation (`verifiedAmount >= expectedAmount`). |
+| `accountSuffix` | string | Recommended | Last digits of account number; required fallback when provider does not return receiver account fields reliably. |
 | `transactionReference` | string | Conditional | Required for PDF receipts (e.g., `FT...`, `CE...`) |
 
 **Response** `200` (verified):

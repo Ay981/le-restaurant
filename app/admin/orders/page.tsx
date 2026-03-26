@@ -70,51 +70,6 @@ type OrdersResponse = {
   message?: string;
 };
 
-function daysAgoIso(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-}
-
-const MOCK_ORDERS: AdminOrder[] = [
-  {
-    id: "mock-order-1",
-    orderNumber: "#MOCK-1001",
-    orderType: "dine_in",
-    status: "pending",
-    total: 42.5,
-    createdAt: daysAgoIso(0),
-    note: "No onions, extra spicy.",
-  },
-  {
-    id: "mock-order-2",
-    orderNumber: "#MOCK-1002",
-    orderType: "delivery",
-    status: "in_progress",
-    total: 67.2,
-    createdAt: daysAgoIso(0),
-    note: "Leave at front desk.",
-  },
-  {
-    id: "mock-order-3",
-    orderNumber: "#MOCK-1003",
-    orderType: "to_go",
-    status: "delivered",
-    total: 23.99,
-    createdAt: daysAgoIso(1),
-    note: null,
-  },
-  {
-    id: "mock-order-4",
-    orderNumber: "#MOCK-1004",
-    orderType: "delivery",
-    status: "pending",
-    total: 89.1,
-    createdAt: daysAgoIso(1),
-    note: "Call on arrival.",
-  },
-];
-
 function formatOrderType(orderType: AdminOrder["orderType"], locale: "en" | "am") {
   if (orderType === "dine_in") return locale === "am" ? "በሬስቶራንት" : "Dine In";
   if (orderType === "to_go") return locale === "am" ? "ለመውሰድ" : "To Go";
@@ -143,7 +98,6 @@ export default function AdminOrdersPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [isUsingMockData, setIsUsingMockData] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -213,10 +167,10 @@ export default function AdminOrdersPage() {
 
       const liveOrders = payload.orders ?? [];
       if (liveOrders.length === 0 && !debouncedSearchQuery && page === 1) {
-        setOrders(MOCK_ORDERS);
-        setIsUsingMockData(true);
-        setPagination({ page: 1, pageSize, total: MOCK_ORDERS.length, totalPages: 1 });
-        setInfoMessage(isAmharic ? "ምንም የቀጥታ ትዕዛዝ አልተገኘም። ለሙከራ ናሙና ውሂብ ታይቷል።" : "No live orders found. Showing mock data for testing.");
+        setOrders([]);
+        setPendingReceiptReviewCount(0);
+        setPagination({ page: 1, pageSize, total: 0, totalPages: 1 });
+        setInfoMessage(isAmharic ? "ምንም የቀጥታ ትዕዛዝ አልተገኘም።" : "No live orders found.");
         return;
       }
 
@@ -230,13 +184,11 @@ export default function AdminOrdersPage() {
           totalPages: 1,
         },
       );
-      setIsUsingMockData(false);
     } catch (error) {
-      setOrders(MOCK_ORDERS);
-      setIsUsingMockData(true);
+      setOrders([]);
       setPendingReceiptReviewCount(0);
-      setPagination({ page: 1, pageSize, total: MOCK_ORDERS.length, totalPages: 1 });
-      setInfoMessage(isAmharic ? "የቀጥታ ትዕዛዞች አይገኙም። ለሙከራ ናሙና ውሂብ ታይቷል።" : "Live orders are unavailable. Showing mock data for testing.");
+      setPagination({ page: 1, pageSize, total: 0, totalPages: 1 });
+      setInfoMessage(null);
       setErrorMessage(error instanceof Error ? error.message : isAmharic ? "ትዕዛዞችን መጫን አልተቻለም።" : "Failed to load orders.");
     } finally {
       setIsLoading(false);
@@ -248,12 +200,6 @@ export default function AdminOrdersPage() {
   }, [loadOrders]);
 
   const handleStatusChange = async (orderId: string, nextStatus: UiOrderStatus) => {
-    if (isUsingMockData) {
-      setOrders((previous) => previous.map((order) => (order.id === orderId ? { ...order, status: nextStatus } : order)));
-      setSuccessMessage(isAmharic ? "የናሙና ትዕዛዝ ሁኔታ በአካባቢ ተዘምኗል።" : "Mock order status updated locally.");
-      return;
-    }
-
     setUpdatingOrderId(orderId);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -286,11 +232,6 @@ export default function AdminOrdersPage() {
   };
 
   const handleFeedbackStatusChange = async (orderId: string, nextStatus: "open" | "resolved") => {
-    if (isUsingMockData) {
-      setSuccessMessage(isAmharic ? "በናሙና ሁኔታ ውስጥ የአስተያየት እርምጃዎች ተሰናክለዋል።" : "Feedback actions are disabled in mock mode.");
-      return;
-    }
-
     setUpdatingFeedbackOrderId(orderId);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -330,11 +271,6 @@ export default function AdminOrdersPage() {
   };
 
   const handleReceiptDecision = async (orderId: string, decision: "accepted" | "rejected") => {
-    if (isUsingMockData) {
-      setSuccessMessage(isAmharic ? "በናሙና ሁኔታ ውስጥ የደረሰኝ ግምገማ እርምጃዎች ተሰናክለዋል።" : "Receipt review actions are disabled in mock mode.");
-      return;
-    }
-
     setReviewingReceiptOrderId(orderId);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -737,31 +673,29 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {!isUsingMockData ? (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-300">
-          <p>
-            {isAmharic ? "ገጽ" : "Showing page"} {pagination.page} {isAmharic ? "ከ" : "of"} {pagination.totalPages} ({pagination.total} {isAmharic ? "ትዕዛዞች" : "orders"})
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1 || isLoading}
-              onClick={() => setPage((previous) => Math.max(1, previous - 1))}
-              className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isAmharic ? "ቀዳሚ" : "Previous"}
-            </button>
-            <button
-              type="button"
-              disabled={page >= pagination.totalPages || isLoading}
-              onClick={() => setPage((previous) => Math.min(pagination.totalPages, previous + 1))}
-              className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isAmharic ? "ቀጣይ" : "Next"}
-            </button>
-          </div>
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-300">
+        <p>
+          {isAmharic ? "ገጽ" : "Showing page"} {pagination.page} {isAmharic ? "ከ" : "of"} {pagination.totalPages} ({pagination.total} {isAmharic ? "ትዕዛዞች" : "orders"})
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={page <= 1 || isLoading}
+            onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+            className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isAmharic ? "ቀዳሚ" : "Previous"}
+          </button>
+          <button
+            type="button"
+            disabled={page >= pagination.totalPages || isLoading}
+            onClick={() => setPage((previous) => Math.min(pagination.totalPages, previous + 1))}
+            className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isAmharic ? "ቀጣይ" : "Next"}
+          </button>
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }
