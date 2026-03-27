@@ -4,7 +4,6 @@ import {
   categories,
   dishes,
   orderSummary,
-  orderTypes,
   restaurantInfo,
 } from "@/lib/data";
 import type { Dish } from "@/lib/data";

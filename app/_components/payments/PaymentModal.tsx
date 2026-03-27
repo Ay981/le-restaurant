@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import TransactionUpload from "@/app/_components/payments/TransactionUpload";
 import { formatCurrency } from "@/lib/currency";
@@ -51,25 +51,7 @@ export default function PaymentModal({
     { id: "mpesa", label: "M-Pesa", disabled: true },
   ];
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        void handleCloseModal(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose, createdOrderId, isOrderFinalized, receiptVerified, isAmharic]);
-
-  const cleanupPendingOrder = async () => {
+  const cleanupPendingOrder = useCallback(async () => {
     if (!createdOrderId || isOrderFinalized || receiptVerified) {
       return;
     }
@@ -90,15 +72,33 @@ export default function PaymentModal({
       },
       keepalive: true,
     });
-  };
+  }, [createdOrderId, isOrderFinalized, receiptVerified]);
 
-  const handleCloseModal = async (cleanupPending: boolean) => {
+  const handleCloseModal = useCallback(async (cleanupPending: boolean) => {
     if (cleanupPending) {
       await cleanupPendingOrder();
     }
 
     onClose();
-  };
+  }, [cleanupPendingOrder, onClose]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        void handleCloseModal(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleCloseModal]);
 
   useEffect(() => {
     return () => {
@@ -106,9 +106,9 @@ export default function PaymentModal({
         void cleanupPendingOrder();
       }
     };
-  }, [createdOrderId, isOrderFinalized, receiptVerified]);
+  }, [createdOrderId, cleanupPendingOrder, isOrderFinalized, receiptVerified]);
 
-  const createOrderRecord = async () => {
+  const createOrderRecord = useCallback(async () => {
     if (createdOrderNumber) {
       return createdOrderNumber;
     }
@@ -172,7 +172,7 @@ export default function PaymentModal({
     setCreatedOrderNumber(payload.orderNumber);
 
     return payload.orderNumber;
-  };
+  }, [createdOrderNumber, deliveryDetails, isAmharic, orderItems, orderSummary.discount, selectedOrderType]);
 
   useEffect(() => {
     if (paymentMethod !== "bankTransfer" || createdOrderNumber || isPreparingOrder) {
@@ -203,7 +203,7 @@ export default function PaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [createdOrderNumber, isAmharic, isPreparingOrder, paymentMethod]);
+  }, [createdOrderNumber, createOrderRecord, isAmharic, isPreparingOrder, paymentMethod]);
 
   const handleConfirmPayment = async () => {
     if (paymentMethod === "bankTransfer" && !receiptVerified) {

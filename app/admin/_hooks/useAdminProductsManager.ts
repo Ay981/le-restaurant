@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { DEFAULT_DISH_IMAGE_URL, getSafeDishImageUrl, validateDishTitle } from "@/lib/dishes/quality";
 import type { CategoryRecord, EditableDish } from "../_components/types";
 
 type DishRecord = {
@@ -33,7 +34,7 @@ export function useAdminProductsManager() {
   const [newDishTitle, setNewDishTitle] = useState("");
   const [newDishPrice, setNewDishPrice] = useState("");
   const [newDishAvailability, setNewDishAvailability] = useState("");
-  const [newDishImageUrl, setNewDishImageUrl] = useState("/image/pizza.png");
+  const [newDishImageUrl, setNewDishImageUrl] = useState(DEFAULT_DISH_IMAGE_URL);
   const [newDishImageFile, setNewDishImageFile] = useState<File | null>(null);
   const [newDishImagePreview, setNewDishImagePreview] = useState<string | null>(null);
   const [newDishCategoryId, setNewDishCategoryId] = useState("");
@@ -63,7 +64,7 @@ export function useAdminProductsManager() {
       title: dish.title,
       price: String(dish.price),
       availabilityCount: String(dish.availability_count),
-      imageUrl: dish.image_url || "/image/pizza.png",
+      imageUrl: getSafeDishImageUrl(dish.image_url),
       categoryId: dish.category_id ? String(dish.category_id) : "",
       isActive: dish.is_active,
     }));
@@ -156,8 +157,9 @@ export function useAdminProductsManager() {
     const price = Number(newDishPrice);
     const availability = Number(newDishAvailability);
 
-    if (!title) {
-      setErrorMessage("Dish title is required.");
+    const titleValidationError = validateDishTitle(title);
+    if (titleValidationError) {
+      setErrorMessage(titleValidationError);
       return;
     }
 
@@ -182,7 +184,7 @@ export function useAdminProductsManager() {
       formData.append("title", title);
       formData.append("price", String(price));
       formData.append("availabilityCount", String(availability));
-      formData.append("imageUrl", newDishImageUrl.trim() || "/image/pizza.png");
+      formData.append("imageUrl", getSafeDishImageUrl(newDishImageUrl));
       formData.append("categoryId", newDishCategoryId ? String(Number(newDishCategoryId)) : "");
       if (newDishImageFile) {
         formData.append("imageFile", newDishImageFile);
@@ -204,7 +206,7 @@ export function useAdminProductsManager() {
       setNewDishTitle("");
       setNewDishPrice("");
       setNewDishAvailability("");
-      setNewDishImageUrl("/image/pizza.png");
+      setNewDishImageUrl(DEFAULT_DISH_IMAGE_URL);
       if (newDishImagePreview) {
         URL.revokeObjectURL(newDishImagePreview);
       }
@@ -222,6 +224,11 @@ export function useAdminProductsManager() {
   };
 
   const saveDishChange = async (dish: EditableDish, imageFile?: File | null) => {
+    const titleValidationError = validateDishTitle(dish.title);
+    if (titleValidationError) {
+      throw new Error(titleValidationError);
+    }
+
     const price = Number(dish.price);
     const availability = Number(dish.availabilityCount);
 
@@ -239,7 +246,7 @@ export function useAdminProductsManager() {
     formData.append("title", dish.title.trim());
     formData.append("price", String(price));
     formData.append("availabilityCount", String(availability));
-    formData.append("imageUrl", dish.imageUrl.trim() || "/image/pizza.png");
+    formData.append("imageUrl", getSafeDishImageUrl(dish.imageUrl));
     formData.append("categoryId", dish.categoryId ? String(Number(dish.categoryId)) : "");
     formData.append("isActive", String(dish.isActive));
     if (imageFile) {
@@ -340,7 +347,7 @@ export function useAdminProductsManager() {
   };
 
   const createModalImagePreview = newDishImagePreview ?? newDishImageUrl;
-  const editModalImagePreview = editDishImagePreview ?? editDishDraft?.imageUrl ?? "/image/pizza.png";
+  const editModalImagePreview = editDishImagePreview ?? getSafeDishImageUrl(editDishDraft?.imageUrl);
 
   return {
     isLoading,

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { toSentenceCaseLabel, validateDishTitle } from "@/lib/dishes/quality";
 import type { CategoryRecord } from "../types";
 
 type CreateDishModalProps = {
@@ -58,7 +59,8 @@ export default function CreateDishModal({
   const parsedPrice = Number(price);
   const parsedAvailability = Number(availability);
 
-  const isTitleValid = normalizedTitle.length > 0;
+  const titleValidationError = validateDishTitle(normalizedTitle);
+  const isTitleValid = titleValidationError === null;
   const isPriceValid = price.trim().length > 0 && Number.isFinite(parsedPrice) && parsedPrice >= 0;
   const isAvailabilityValid =
     availability.trim().length > 0 && Number.isInteger(parsedAvailability) && parsedAvailability >= 0;
@@ -168,7 +170,7 @@ export default function CreateDishModal({
                 />
                 {shouldShowTitleError ? (
                   <span id={`${titleInputId}-error`} className="mt-1 block text-xs text-red-300">
-                    {isAmharic ? "የምግብ ርዕስ ያስፈልጋል።" : "Dish title is required."}
+                    {isAmharic ? "የምግብ ስም አጭር እና ግልጽ መሆን አለበት፤ እንደ \"aaaa\" ያሉ ተደጋጋሚ ፊደሎችን ያስወግዱ።" : titleValidationError}
                   </span>
                 ) : null}
               </label>
@@ -234,7 +236,7 @@ export default function CreateDishModal({
                   <option value="">{isAmharic ? "ምድብ የለም" : "No category"}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {toSentenceCaseLabel(category.name)}
                     </option>
                   ))}
                 </select>

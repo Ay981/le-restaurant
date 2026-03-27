@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { toSentenceCaseLabel, validateDishTitle } from "@/lib/dishes/quality";
 import type { CategoryRecord, EditableDish } from "../types";
 
 type EditDishModalProps = {
@@ -51,7 +52,8 @@ export default function EditDishModal({
   const parsedPrice = Number(draftPrice);
   const parsedAvailability = Number(draftAvailability);
 
-  const isTitleValid = normalizedTitle.length > 0;
+  const titleValidationError = validateDishTitle(normalizedTitle);
+  const isTitleValid = titleValidationError === null;
   const isPriceValid = draftPrice.trim().length > 0 && Number.isFinite(parsedPrice) && parsedPrice >= 0;
   const isAvailabilityValid = draftAvailability.trim().length > 0 && Number.isInteger(parsedAvailability) && parsedAvailability >= 0;
 
@@ -145,85 +147,107 @@ export default function EditDishModal({
           </button>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_280px]">
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              id={titleInputId}
-              ref={titleInputRef}
-              value={draft.title}
-              onChange={(event) => onDraftChange((current) => ({ ...current, title: event.target.value }))}
-              className={`app-bg-elevated h-11 rounded-xl border px-3 text-sm text-gray-100 ${
-                shouldShowTitleError ? "border-red-400/80" : "border-white/10"
-              }`}
-              aria-invalid={shouldShowTitleError}
-              aria-describedby={shouldShowTitleError ? `${titleInputId}-error` : undefined}
-            />
-            {shouldShowTitleError ? (
-              <span id={`${titleInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                {isAmharic ? "የምግብ ርዕስ ያስፈልጋል።" : "Dish title is required."}
+        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_280px] lg:items-stretch">
+          <div className="flex h-full flex-col gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="text-sm text-gray-300">
+                <span className="mb-1.5 block">{isAmharic ? "የምግብ ርዕስ" : "Dish title"}</span>
+                <input
+                  id={titleInputId}
+                  ref={titleInputRef}
+                  value={draft.title}
+                  onChange={(event) => onDraftChange((current) => ({ ...current, title: event.target.value }))}
+                  className={`app-bg-elevated h-11 w-full rounded-xl border px-3 text-sm text-gray-100 ${
+                    shouldShowTitleError ? "border-red-400/80" : "border-white/10"
+                  }`}
+                  aria-invalid={shouldShowTitleError}
+                  aria-describedby={shouldShowTitleError ? `${titleInputId}-error` : undefined}
+                />
+                {shouldShowTitleError ? (
+                  <span id={`${titleInputId}-error`} className="mt-1 block text-xs text-red-300">
+                    {isAmharic ? "የምግብ ስም አጭር እና ግልጽ መሆን አለበት፤ እንደ \"aaaa\" ያሉ ተደጋጋሚ ፊደሎችን ያስወግዱ።" : titleValidationError}
+                  </span>
+                ) : null}
+              </label>
+
+              <label className="text-sm text-gray-300">
+                <span className="mb-1.5 block">{isAmharic ? "ዋጋ" : "Price"}</span>
+                <input
+                  id={priceInputId}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.price}
+                  onChange={(event) => onDraftChange((current) => ({ ...current, price: event.target.value }))}
+                  className={`app-bg-elevated h-11 w-full rounded-xl border px-3 text-sm text-gray-100 ${
+                    shouldShowPriceError ? "border-red-400/80" : "border-white/10"
+                  }`}
+                  aria-invalid={shouldShowPriceError}
+                  aria-describedby={shouldShowPriceError ? `${priceInputId}-error` : undefined}
+                />
+                {shouldShowPriceError ? (
+                  <span id={`${priceInputId}-error`} className="mt-1 block text-xs text-red-300">
+                    {isAmharic ? "ዋጋ 0 ወይም ከዚያ በላይ መሆን አለበት።" : "Price must be 0 or greater."}
+                  </span>
+                ) : null}
+              </label>
+
+              <label className="text-sm text-gray-300">
+                <span className="mb-1.5 block">{isAmharic ? "ተገኝነት" : "Availability"}</span>
+                <input
+                  id={availabilityInputId}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={draft.availabilityCount}
+                  onChange={(event) => onDraftChange((current) => ({ ...current, availabilityCount: event.target.value }))}
+                  className={`app-bg-elevated h-11 w-full rounded-xl border px-3 text-sm text-gray-100 ${
+                    shouldShowAvailabilityError ? "border-red-400/80" : "border-white/10"
+                  }`}
+                  aria-invalid={shouldShowAvailabilityError}
+                  aria-describedby={shouldShowAvailabilityError ? `${availabilityInputId}-error` : undefined}
+                />
+                {shouldShowAvailabilityError ? (
+                  <span id={`${availabilityInputId}-error`} className="mt-1 block text-xs text-red-300">
+                    {isAmharic ? "ተገኝነት 0 ወይም ከዚያ በላይ ሙሉ ቁጥር መሆን አለበት።" : "Availability must be a whole number 0 or greater."}
+                  </span>
+                ) : null}
+              </label>
+
+              <label className="text-sm text-gray-300">
+                <span className="mb-1.5 block">{isAmharic ? "ምድብ" : "Category"}</span>
+                <select
+                  id={categorySelectId}
+                  value={draft.categoryId}
+                  onChange={(event) => onDraftChange((current) => ({ ...current, categoryId: event.target.value }))}
+                  className="app-bg-elevated h-11 w-full rounded-xl border border-white/10 px-3 text-sm text-gray-100"
+                >
+                  <option value="">{isAmharic ? "ምድብ የለም" : "No category"}</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {toSentenceCaseLabel(category.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="text-sm text-gray-300">
+              <span className="mb-1.5 block">{isAmharic ? "የምስል URL አማራጭ" : "Image URL fallback"}</span>
+              <input
+                id={imageUrlInputId}
+                value={draft.imageUrl}
+                onChange={(event) => onDraftChange((current) => ({ ...current, imageUrl: event.target.value }))}
+                className="app-bg-elevated h-11 w-full rounded-xl border border-white/10 px-3 text-sm text-gray-100"
+                placeholder={isAmharic ? "አማራጭ" : "Optional"}
+              />
+            </label>
+
+            <label htmlFor={imageInputId} className="text-sm text-gray-300">
+              <span className="mb-1.5 block">{isAmharic ? "የምግብ ምስል" : "Dish image"}</span>
+              <span className="app-bg-main flex min-h-14 cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/25 px-3 py-3 text-center text-sm text-gray-300 transition hover:border-white/40">
+                {selectedFileName ? `${isAmharic ? "የተመረጠ:" : "Selected:"} ${selectedFileName}` : isAmharic ? "ተተኪ ምስል ይጫኑ" : "Upload replacement image"}
               </span>
-            ) : null}
-            <input
-              id={priceInputId}
-              type="number"
-              min="0"
-              step="0.01"
-              value={draft.price}
-              onChange={(event) => onDraftChange((current) => ({ ...current, price: event.target.value }))}
-              className={`app-bg-elevated h-11 rounded-xl border px-3 text-sm text-gray-100 ${
-                shouldShowPriceError ? "border-red-400/80" : "border-white/10"
-              }`}
-              aria-invalid={shouldShowPriceError}
-              aria-describedby={shouldShowPriceError ? `${priceInputId}-error` : undefined}
-            />
-            {shouldShowPriceError ? (
-              <span id={`${priceInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                {isAmharic ? "ዋጋ 0 ወይም ከዚያ በላይ መሆን አለበት።" : "Price must be 0 or greater."}
-              </span>
-            ) : null}
-            <input
-              id={availabilityInputId}
-              type="number"
-              min="0"
-              step="1"
-              value={draft.availabilityCount}
-              onChange={(event) => onDraftChange((current) => ({ ...current, availabilityCount: event.target.value }))}
-              className={`app-bg-elevated h-11 rounded-xl border px-3 text-sm text-gray-100 ${
-                shouldShowAvailabilityError ? "border-red-400/80" : "border-white/10"
-              }`}
-              aria-invalid={shouldShowAvailabilityError}
-              aria-describedby={shouldShowAvailabilityError ? `${availabilityInputId}-error` : undefined}
-            />
-            {shouldShowAvailabilityError ? (
-              <span id={`${availabilityInputId}-error`} className="-mt-2 text-xs text-red-300 md:col-span-2">
-                {isAmharic ? "ተገኝነት 0 ወይም ከዚያ በላይ ሙሉ ቁጥር መሆን አለበት።" : "Availability must be a whole number 0 or greater."}
-              </span>
-            ) : null}
-            <select
-              id={categorySelectId}
-              value={draft.categoryId}
-              onChange={(event) => onDraftChange((current) => ({ ...current, categoryId: event.target.value }))}
-              className="app-bg-elevated h-11 rounded-xl border border-white/10 px-3 text-sm text-gray-100"
-            >
-              <option value="">{isAmharic ? "ምድብ የለም" : "No category"}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <input
-              id={imageUrlInputId}
-              value={draft.imageUrl}
-              onChange={(event) => onDraftChange((current) => ({ ...current, imageUrl: event.target.value }))}
-              className="app-bg-elevated h-11 rounded-xl border border-white/10 px-3 text-sm text-gray-100 md:col-span-2"
-              placeholder={isAmharic ? "የምስል URL አማራጭ (አማራጭ)" : "Image URL fallback (optional)"}
-            />
-            <label
-              htmlFor={imageInputId}
-              className="app-bg-main cursor-pointer rounded-xl border border-dashed border-white/25 px-3 py-3 text-center text-sm text-gray-300 md:col-span-2 hover:border-white/40"
-            >
-              {selectedFileName ? `${isAmharic ? "የተመረጠ:" : "Selected:"} ${selectedFileName}` : isAmharic ? "ተተኪ ምስል ይጫኑ" : "Upload replacement image"}
               <input
                 id={imageInputId}
                 type="file"
@@ -232,7 +256,8 @@ export default function EditDishModal({
                 onChange={onImageFileChange}
               />
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-200 md:col-span-2">
+
+            <label className="flex items-center gap-2 text-sm text-gray-200">
               <input
                 type="checkbox"
                 checked={draft.isActive}

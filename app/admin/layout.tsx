@@ -93,8 +93,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <main className="app-bg-main min-h-screen px-2 pb-6 pt-3 text-white md:px-3 md:pt-4 lg:py-2 lg:pb-2 lg:pt-2">
-      <div className="w-full rounded-2xl border border-white/10 p-2.5 md:rounded-3xl md:p-4">
+    <main className="app-bg-main min-h-screen px-2 pb-6 pt-1 text-white md:px-3 md:pt-4 lg:py-2 lg:pb-2 lg:pt-2">
+      <div className="w-full rounded-2xl border border-white/10 p-2 md:rounded-3xl md:p-4">
         <div className="grid items-stretch gap-3 lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[72px_1fr]">
           <AdminSideRail />
           <section>{children}</section>

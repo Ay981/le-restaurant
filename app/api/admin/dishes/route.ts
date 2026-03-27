@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadDishImage } from "@/lib/supabase/dish-image-upload";
+import { getSafeDishImageUrl, validateDishTitle } from "@/lib/dishes/quality";
 import { parseDishPayload, toNonNegativeInteger, toNonNegativeNumber } from "./_lib/parsing";
 
 export async function POST(request: Request) {
@@ -21,8 +22,9 @@ export async function POST(request: Request) {
     const price = toNonNegativeNumber(body.price);
     const availabilityCount = toNonNegativeInteger(body.availabilityCount);
 
-    if (!title) {
-      return NextResponse.json({ message: "Dish title is required." }, { status: 400 });
+    const titleValidationError = validateDishTitle(title);
+    if (titleValidationError) {
+      return NextResponse.json({ message: titleValidationError }, { status: 400 });
     }
 
     if (price === null) {
@@ -37,11 +39,7 @@ export async function POST(request: Request) {
     }
 
     const uploadedImageUrl = body.imageFile ? await uploadDishImage(body.imageFile) : null;
-    const imageUrl =
-      uploadedImageUrl ||
-      (typeof body.imageUrl === "string" && body.imageUrl.trim().length > 0
-        ? body.imageUrl.trim()
-        : "/image/pizza.png");
+    const imageUrl = uploadedImageUrl || getSafeDishImageUrl(body.imageUrl);
 
     const supabase = createSupabaseAdminClient();
 
