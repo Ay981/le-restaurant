@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { PAYMENT_RECEIPTS_BUCKET } from "@/lib/supabase/payment-receipt-upload";
 
 type DbOrderStatus = "pending" | "preparing" | "served" | "completed" | "cancelled";
-type UiOrderStatus = "pending" | "in_progress" | "delivered";
+type UiOrderStatus = "pending" | "in_progress" | "delivered" | "rejected";
 
 type OrderRow = {
   id: string;
@@ -19,6 +19,7 @@ type OrderRow = {
   customer_name: string | null;
   customer_phone: string | null;
   delivery_address: string | null;
+  admin_decision_note: string | null;
 };
 
 type OrderItemRow = {
@@ -64,6 +65,7 @@ type FeedbackRow = {
 function toUiStatus(status: DbOrderStatus): UiOrderStatus {
   if (status === "pending") return "pending";
   if (status === "preparing") return "in_progress";
+  if (status === "cancelled") return "rejected";
   return "delivered";
 }
 
@@ -86,10 +88,10 @@ export async function GET(request: Request) {
     let queryBuilder = supabase
       .from("orders")
       .select(
-        "id, order_number, order_type, status, total, created_at, started_at, delivered_at, note, customer_name, customer_phone, delivery_address",
+        "id, order_number, order_type, status, total, created_at, started_at, delivered_at, note, customer_name, customer_phone, delivery_address, admin_decision_note",
         { count: "exact" },
       )
-      .in("status", ["pending", "preparing", "served", "completed"])
+      .in("status", ["pending", "preparing", "served", "completed", "cancelled"])
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -275,6 +277,7 @@ export async function GET(request: Request) {
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
       deliveryAddress: order.delivery_address,
+      adminDecisionNote: order.admin_decision_note,
       items: orderItemsByOrderId.get(order.id) ?? [],
       receipt: (() => {
         const receipt = latestReceiptByOrderNumber.get(order.order_number);

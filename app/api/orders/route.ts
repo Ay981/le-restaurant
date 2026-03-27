@@ -25,12 +25,16 @@ type DbOrderType = "dine_in" | "to_go" | "delivery";
 function mapOrderTypeToDb(value: string): DbOrderType {
   const normalized = value.trim().toLowerCase();
 
-  if (normalized === "delivery") {
+  if (normalized === "delivery" || normalized === "ዴሊቨሪ") {
     return "delivery";
   }
 
-  if (normalized === "to go" || normalized === "to_go" || normalized === "togo") {
+  if (normalized === "to go" || normalized === "to_go" || normalized === "togo" || normalized === "ለመውሰድ") {
     return "to_go";
+  }
+
+  if (normalized === "dine in" || normalized === "dine_in" || normalized === "በሬስቶራንት") {
+    return "dine_in";
   }
 
   return "dine_in";

@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { requireAdminOrStaffAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-type UiOrderStatus = "pending" | "in_progress" | "delivered";
+type UiOrderStatus = "pending" | "in_progress" | "delivered" | "rejected";
 type DbOrderStatus = "pending" | "preparing" | "completed";
 
 type OrderRow = {
   id: string;
-  status: DbOrderStatus | "served";
+  status: DbOrderStatus | "served" | "cancelled";
   started_at: string | null;
   delivered_at: string | null;
   customer_user_id: string | null;
@@ -20,14 +20,15 @@ function toDbStatus(status: UiOrderStatus): DbOrderStatus {
   return "completed";
 }
 
-function toUiStatus(status: DbOrderStatus): UiOrderStatus {
+function toUiStatusFromDb(status: OrderRow["status"]): UiOrderStatus {
   if (status === "pending") return "pending";
   if (status === "preparing") return "in_progress";
+  if (status === "cancelled") return "rejected";
   return "delivered";
 }
 
 function parseStatus(value: unknown): UiOrderStatus | null {
-  if (value === "pending" || value === "in_progress" || value === "delivered") {
+  if (value === "pending" || value === "in_progress" || value === "delivered" || value === "rejected") {
     return value;
   }
 
@@ -38,7 +39,7 @@ function canTransition(current: UiOrderStatus, next: UiOrderStatus) {
   if (current === next) return true;
 
   if (current === "pending") {
-    return next === "in_progress";
+    return next === "in_progress" || next === "rejected";
   }
 
   if (current === "in_progress") {
@@ -46,6 +47,14 @@ function canTransition(current: UiOrderStatus, next: UiOrderStatus) {
   }
 
   return false;
+}
+
+function normalizeReason(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
 }
 
 type RouteContext = {
@@ -66,12 +75,20 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Order id is required." }, { status: 400 });
     }
 
-    const body = (await request.json()) as { status?: unknown };
+    const body = (await request.json()) as { status?: unknown; reason?: unknown };
     const nextStatus = parseStatus(body.status);
+    const rejectionReason = normalizeReason(body.reason);
 
     if (!nextStatus) {
       return NextResponse.json(
-        { message: "Status must be one of: pending, in_progress, delivered." },
+        { message: "Status must be one of: pending, in_progress, delivered, rejected." },
+        { status: 400 },
+      );
+    }
+
+    if (nextStatus === "rejected" && rejectionReason.length < 3) {
+      return NextResponse.json(
+        { message: "A rejection reason with at least 3 characters is required." },
         { status: 400 },
       );
     }
@@ -88,11 +105,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ message: currentOrderError?.message ?? "Order not found." }, { status: 404 });
     }
 
-    const currentStatus = toUiStatus(currentOrder.status === "served" ? "completed" : currentOrder.status);
+    const currentStatus = toUiStatusFromDb(currentOrder.status);
     if (!canTransition(currentStatus, nextStatus)) {
       return NextResponse.json(
         {
-          message: `Invalid status transition from ${currentStatus} to ${nextStatus}. Allowed flow is pending → in_progress → delivered.`,
+          message: `Invalid status transition from ${currentStatus} to ${nextStatus}. Allowed flow is pending → in_progress → delivered or pending → rejected.`,
         },
         { status: 400 },
       );
@@ -132,12 +149,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const nowIso = new Date().toISOString();
-    const nextDbStatus = toDbStatus(nextStatus);
+    const nextDbStatus = nextStatus === "rejected" ? "cancelled" : toDbStatus(nextStatus);
     const updatePayload: {
-      status: DbOrderStatus;
+      status: DbOrderStatus | "cancelled";
       started_at?: string;
       delivered_at?: string;
       last_status_changed_by?: string;
+      admin_decision_note?: string | null;
     } = {
       status: nextDbStatus,
       last_status_changed_by: authResult.userId,
@@ -154,6 +172,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (!currentOrder.delivered_at) {
         updatePayload.delivered_at = nowIso;
       }
+    }
+
+    if (nextStatus === "rejected") {
+      updatePayload.admin_decision_note = rejectionReason;
+    } else {
+      updatePayload.admin_decision_note = null;
     }
 
     const { data, error } = await supabase
@@ -179,13 +203,27 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (currentStatus !== nextStatus && currentOrder.customer_user_id) {
-      const nextStatusLabel = nextStatus === "in_progress" ? "In Progress" : nextStatus === "pending" ? "Pending" : "Delivered";
+      const nextStatusLabel =
+        nextStatus === "in_progress"
+          ? "Accepted"
+          : nextStatus === "pending"
+            ? "Pending"
+            : nextStatus === "rejected"
+              ? "Rejected"
+              : "Delivered";
+
+      const message =
+        nextStatus === "rejected"
+          ? `${currentOrder.order_number} was rejected. Reason: ${rejectionReason}`
+          : nextStatus === "in_progress"
+            ? `${currentOrder.order_number} was accepted and is now in progress.`
+            : `${currentOrder.order_number} is now ${nextStatusLabel}.`;
 
       const { error: notificationError } = await supabase.from("order_notifications").insert({
         order_id: id,
         customer_user_id: currentOrder.customer_user_id,
         title: "Order Status Updated",
-        message: `${currentOrder.order_number} is now ${nextStatusLabel}.`,
+        message,
         status_from: currentOrder.status,
         status_to: nextDbStatus,
       });
@@ -202,9 +240,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return NextResponse.json({
       id: order.id,
-      status: toUiStatus(order.status === "served" ? "completed" : order.status),
+      status: toUiStatusFromDb(order.status),
       startedAt: order.started_at,
       deliveredAt: order.delivered_at,
+      reason: nextStatus === "rejected" ? rejectionReason : null,
       message: "Order status updated.",
     });
   } catch (error) {

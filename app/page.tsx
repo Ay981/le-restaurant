@@ -1,13 +1,39 @@
 import Link from "next/link";
 import Image from "next/image";
-import { dishes } from "@/lib/data";
 import { formatCurrency } from "@/lib/currency";
 import { t } from "@/lib/i18n/messages";
 import { getServerLocale } from "@/lib/i18n/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+type FeaturedDish = {
+  title: string;
+  price: number;
+  image_url: string | null;
+};
+
+async function getFeaturedDishes() {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("dishes")
+      .select("title, price, image_url")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(2);
+
+    if (error || !data) {
+      return [] as FeaturedDish[];
+    }
+
+    return data as FeaturedDish[];
+  } catch {
+    return [] as FeaturedDish[];
+  }
+}
 
 export default async function Page() {
   const locale = await getServerLocale();
-  const featuredDishes = dishes.slice(0, 2);
+  const featuredDishes = await getFeaturedDishes();
   const showcaseImages = ["/image/pizza.png", "/image/image.png"];
   const highlights = [
     { label: t(locale, "home", "statPrepLabel"), value: t(locale, "home", "statPrepValue") },
@@ -110,26 +136,28 @@ export default async function Page() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {featuredDishes.map((dish, index) => (
-                    <article key={dish.title} className="app-bg-elevated rounded-2xl border border-white/10 p-3">
-                      <div className="h-24 overflow-hidden rounded-xl border border-white/10">
-                        <Image
-                          src={showcaseImages[index] ?? "/image/pizza.png"}
-                          alt={dish.title}
-                          width={320}
-                          height={160}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <p className="mt-3 text-base font-semibold text-gray-100">{dish.title}</p>
-                      <div className="mt-1 flex items-center justify-between text-xs text-gray-300">
-                        <span>★ 5.0</span>
-                        <span>{formatCurrency(dish.price)}</span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                {featuredDishes.length > 0 ? (
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {featuredDishes.map((dish, index) => (
+                      <article key={dish.title} className="app-bg-elevated rounded-2xl border border-white/10 p-3">
+                        <div className="h-24 overflow-hidden rounded-xl border border-white/10">
+                          <Image
+                            src={dish.image_url || showcaseImages[index] || "/image/pizza.png"}
+                            alt={dish.title}
+                            width={320}
+                            height={160}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <p className="mt-3 text-base font-semibold text-gray-100">{dish.title}</p>
+                        <div className="mt-1 flex items-center justify-between text-xs text-gray-300">
+                          <span>★ 5.0</span>
+                          <span>{formatCurrency(dish.price)}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

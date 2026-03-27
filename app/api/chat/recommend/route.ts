@@ -15,6 +15,9 @@ type ChatAnswers = {
   budget: string;
   dietary: string;
   mealType: string;
+  occasion: string;
+  proteins: string;
+  restrictions: string;
 };
 
 type RecommendationRequest = {
@@ -140,6 +143,9 @@ function buildRuleBasedRecommendations(
   const spice = normalize(answers.spiceLevel);
   const dietary = normalize(answers.dietary);
   const mealType = normalize(answers.mealType);
+  const occasion = normalize(answers.occasion);
+  const proteins = normalize(answers.proteins);
+  const restrictions = normalize(answers.restrictions);
   const budget = normalize(answers.budget);
   const budgetCap = BUDGET_CAP[budget] ?? Number.POSITIVE_INFINITY;
 
@@ -150,11 +156,25 @@ function buildRuleBasedRecommendations(
     if (favorite && haystack.includes(favorite)) score += 4;
     if (cuisine && cuisine !== "any" && haystack.includes(cuisine)) score += 3;
     if (spice === "spicy" && /spicy|hot/.test(haystack)) score += 3;
+    if (spice === "very spicy" && /spicy|hot|fiery|flame/.test(haystack)) score += 3;
     if (spice === "mild" && !/spicy|hot/.test(haystack)) score += 2;
     if (dietary === "vegetarian" && /vegetable|veggie|spinach|mushroom/.test(haystack)) score += 3;
+    if (dietary === "vegan" && /vegetable|veggie|spinach|mushroom|fruit|lentil|bean/.test(haystack)) score += 3;
     if (dietary === "high-protein" && /beef|chicken|seafood|egg|grill/.test(haystack)) score += 3;
+    if (dietary === "low-carb" && /salad|soup|grill|protein|vegetable/.test(haystack)) score += 2;
     if (mealType === "light" && /soup|salad|cold/.test(haystack)) score += 2;
     if (mealType === "filling" && /rice|noodle|pasta|grill/.test(haystack)) score += 2;
+    if (mealType === "balanced" && /grill|vegetable|salad|protein/.test(haystack)) score += 2;
+    if (occasion === "quick bite" && /appetizer|snack|side|soup/.test(haystack)) score += 2;
+    if (occasion === "celebration" && /signature|special|premium|platter/.test(haystack)) score += 2;
+    if (proteins === "chicken" && /chicken|poultry/.test(haystack)) score += 2;
+    if (proteins === "beef" && /beef|steak/.test(haystack)) score += 2;
+    if (proteins === "seafood" && /seafood|fish|shrimp|salmon|tuna/.test(haystack)) score += 2;
+    if (proteins === "egg" && /egg|omelet/.test(haystack)) score += 2;
+    if (proteins === "plant-based" && /veggie|vegetable|lentil|bean|tofu/.test(haystack)) score += 2;
+    if (restrictions === "gluten-free" && !/bread|wheat|flour|pasta/.test(haystack)) score += 1;
+    if (restrictions === "dairy-free" && !/cheese|cream|butter|milk/.test(haystack)) score += 1;
+    if (restrictions === "nut-free" && !/peanut|almond|walnut|cashew/.test(haystack)) score += 1;
     if (dish.price <= budgetCap) score += 2;
 
     return { dish, score };
@@ -165,7 +185,7 @@ function buildRuleBasedRecommendations(
     .slice(0, 5)
     .map(({ dish }) => ({
       title: dish.title,
-      reason: `Good match for ${answers.spiceLevel.toLowerCase()} taste, ${answers.mealType.toLowerCase()} meal preference, and ${answers.budget.toLowerCase()} budget.`,
+      reason: `Matches your ${answers.mealType.toLowerCase()} meal style, ${answers.dietary.toLowerCase()} preference, and ${answers.budget.toLowerCase()} budget.`,
     }));
 }
 
@@ -189,11 +209,13 @@ async function getGeminiRecommendations(
   const modelsToTry = uniqueModels([configuredModel, ...configuredFallbackModels, ...DEFAULT_GEMINI_MODELS]);
 
   const prompt = [
-    "You are a restaurant assistant.",
+    "You are a professional restaurant AI recommender assistant.",
     "Given user preferences and available dishes, return exactly 5 recommendations.",
     "Rules:",
     "- Recommend only from provided dishes.",
-    "- Keep reasons short (max 18 words each).",
+    "- Use ALL user preferences holistically: favoriteRecipe, cuisine, spiceLevel, budget, dietary, mealType, occasion, proteins, restrictions.",
+    "- Prioritize dishes that satisfy multiple preferences at the same time.",
+    "- Keep reasons short (max 20 words each), specific, and practical.",
     "- Output strict JSON as {\"recommendations\":[{\"title\":string,\"reason\":string}]}",
     "User preferences:",
     JSON.stringify(answers),
@@ -306,6 +328,9 @@ export async function POST(request: Request) {
       budget: body?.answers?.budget ?? "Medium",
       dietary: body?.answers?.dietary ?? "No preference",
       mealType: body?.answers?.mealType ?? "Filling",
+      occasion: body?.answers?.occasion ?? "Casual",
+      proteins: body?.answers?.proteins ?? "Any",
+      restrictions: body?.answers?.restrictions ?? "None",
     };
 
     const geminiResult = await getGeminiRecommendations(dishes, answers);

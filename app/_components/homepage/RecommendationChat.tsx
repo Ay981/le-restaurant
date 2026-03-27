@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import type { Dish } from "@/lib/data";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { useI18n } from "@/components/i18n/I18nProvider";
 
 type RecommendationChatProps = {
   dishes: Dish[];
@@ -17,6 +17,9 @@ type Answers = {
   budget: string;
   dietary: string;
   mealType: string;
+  occasion: string;
+  proteins: string;
+  restrictions: string;
 };
 
 type PreviousOrderRow = {
@@ -38,11 +41,15 @@ const initialAnswers: Answers = {
   budget: "Medium",
   dietary: "No preference",
   mealType: "Filling",
+  occasion: "Casual",
+  proteins: "Any",
+  restrictions: "None",
 };
 
 export default function RecommendationChat({ dishes, onAddDish }: RecommendationChatProps) {
   const { locale } = useI18n();
   const isAmharic = locale === "am";
+
   const [isOpen, setIsOpen] = useState(false);
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +61,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const [personalizedDishes, setPersonalizedDishes] = useState<string[]>([]);
 
-  const byTitle = useMemo(() => {
-    return new Map(dishes.map((dish) => [dish.title, dish]));
-  }, [dishes]);
-
+  const byTitle = useMemo(() => new Map(dishes.map((dish) => [dish.title, dish])), [dishes]);
   const hasPersonalizedData = isAuthenticated && personalizedDishes.length > 0;
 
   useEffect(() => {
@@ -93,6 +97,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
         }
 
         const counts = new Map<string, number>();
+
         (data as PreviousOrderRow[]).forEach((order) => {
           order.order_items?.forEach((item) => {
             const title = item.dish_title_snapshot?.trim();
@@ -102,20 +107,13 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
         });
 
         const top = [...counts.entries()]
-          .sort((left, right) => right[1] - left[1])
+          .sort((a, b) => b[1] - a[1])
           .slice(0, 5)
           .map(([title]) => title);
 
         setPersonalizedDishes(top);
-      } catch (error) {
-        console.error("loadPersonalizedData failed", {
-          source: "RecommendationChat",
-          client: "createBrowserSupabaseClient",
-          error,
-        });
-
+      } catch {
         if (!mounted) return;
-
         setPersonalizedDishes([]);
         setIsAuthenticated(false);
       } finally {
@@ -137,14 +135,17 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       return;
     }
 
-    setAnswers((previous) => ({
-      ...previous,
+    setAnswers((prev) => ({
+      ...prev,
       favoriteRecipe: personalizedDishes.join(", "),
       cuisine: "For You",
       spiceLevel: "For You",
       budget: "For You",
       dietary: "For You",
       mealType: "For You",
+      occasion: "For You",
+      proteins: "For You",
+      restrictions: "For You",
     }));
   };
 
@@ -153,7 +154,8 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
     setErrorMessage("");
     setFallbackReason("");
 
-    const normalizeForYou = (value: string, fallback: string) => (value === "For You" ? fallback : value);
+    const normalizeForYou = (value: string, fallback: string) =>
+      value === "For You" ? fallback : value;
 
     const preparedAnswers: Answers = {
       favoriteRecipe:
@@ -167,6 +169,9 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       budget: normalizeForYou(answers.budget, "Medium"),
       dietary: normalizeForYou(answers.dietary, "No preference"),
       mealType: normalizeForYou(answers.mealType, "Filling"),
+      occasion: normalizeForYou(answers.occasion, "Casual"),
+      proteins: normalizeForYou(answers.proteins, "Any"),
+      restrictions: normalizeForYou(answers.restrictions, "None"),
     };
 
     if (hasPersonalizedData) {
@@ -175,7 +180,10 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
         answers.spiceLevel === "For You" ||
         answers.budget === "For You" ||
         answers.dietary === "For You" ||
-        answers.mealType === "For You";
+        answers.mealType === "For You" ||
+        answers.occasion === "For You" ||
+        answers.proteins === "For You" ||
+        answers.restrictions === "For You";
 
       if (isForYouSelected) {
         preparedAnswers.favoriteRecipe = `${preparedAnswers.favoriteRecipe} | Previous favorites: ${personalizedDishes.join(", ")}`;
@@ -188,10 +196,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          answers: preparedAnswers,
-          dishes,
-        }),
+        body: JSON.stringify({ answers: preparedAnswers, dishes }),
       });
 
       const payload = (await response.json()) as {
@@ -213,7 +218,11 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       setSource(payload.source || "rule-based");
       setFallbackReason(payload.fallbackReason || "");
     } catch {
-      setErrorMessage(isAmharic ? "በአሁኑ ጊዜ ምክሮችን ማመንጨት አልተቻለም።" : "Unable to generate recommendations right now.");
+      setErrorMessage(
+        isAmharic
+          ? "በአሁኑ ጊዜ ምክሮችን ማመንጨት አልተቻለም።"
+          : "Unable to generate recommendations right now.",
+      );
       setRecommendations([]);
       setSource("");
       setFallbackReason("");
@@ -224,205 +233,295 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
 
   return (
     <>
-      <div className="mt-6 rounded-2xl border border-white/10 app-bg-panel p-4 md:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-6 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-white/5 p-4 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">{isAmharic ? "ለመምረጥ እገዛ ይፈልጋሉ?" : "Need help choosing?"}</h3>
-            <p className="mt-1 text-sm text-gray-400">{isAmharic ? "የAI ምክር ስርዓቱን ተጠቅመው በጥቂት ሰከንዶች የተመረጡ ምግቦችን ያግኙ።" : "Use the AI recommender to get a curated dish list in seconds."}</p>
+            <h3 className="text-xl font-bold text-white">
+              🔥 {isAmharic ? "ምግብ ምክር ሞድ" : "AI Recommender"}
+            </h3>
+            <p className="mt-2 text-sm text-gray-300">
+              {isAmharic
+                ? "ሰንብዎ ጥቂት ምርጫዎችን ይግቡ፣ AI ለእርስዎ ተስማሚ ምግቦችን ይሰጣል"
+                : "Share your mood and preferences, get personalized dish picks instantly."}
+            </p>
           </div>
 
           <button
             type="button"
-            className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white"
+            className="app-bg-accent rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:scale-105 hover:shadow-orange-500/40"
             onClick={() => setIsOpen(true)}
           >
-            {isAmharic ? "ምክር መስጫ ክፈት" : "Open Recommender"}
+            ✨ {isAmharic ? "ይጀምር" : "Open"}
           </button>
         </div>
       </div>
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-50 bg-black/65 px-4 py-5 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 bg-black/70 px-4 py-5 backdrop-blur-md"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setIsOpen(false);
             }
           }}
         >
-          <div className="mx-auto h-full w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/10 app-bg-panel p-4 md:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="mx-auto h-full w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-gradient-to-br from-gray-950 to-gray-900 p-5 shadow-2xl md:p-6">
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-5">
               <div>
-                <h3 className="text-xl font-semibold text-white">AI Dish Recommender</h3>
-                <p className="mt-1 text-sm text-gray-400">{isAmharic ? "ፍላጎትዎንና ምርጫዎትን ያካፍሉ፣ ተስማሚ ምግቦችን እንጠቁማለን።" : "Tell us your mood and preferences, we’ll suggest your best matches."}</p>
+                <h2 className="text-2xl font-bold text-white">
+                  🍽️ {isAmharic ? "ምግብ ምክር" : "Food Vibes"}
+                </h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  {isAmharic ? "ምን ሰንብ ወይም ምግብ ትወዳለህ?" : "What are you in the mood for?"}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="app-hover-accent-soft rounded-xl border border-white/15 px-3 py-2 text-sm text-gray-200"
+                className="rounded-xl border border-white/15 bg-white/5 p-2 text-white transition-colors hover:bg-white/10"
               >
-                {isAmharic ? "ዝጋ" : "Close"}
+                ✕
               </button>
             </div>
 
-            <div className="mt-5 space-y-4">
-          {isAuthenticated ? (
-            <div className="rounded-xl border border-white/10 app-bg-elevated p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-200">{isAmharic ? "ለእርስዎ" : "For You"}</p>
-                <button
-                  type="button"
-                  onClick={applyForYouMode}
-                  disabled={!hasPersonalizedData || isLoadingPreferences}
-                  className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isAmharic ? "ያለፉ ትዕዛዞቼን ተጠቀም" : "Use my previous orders"}
-                </button>
-              </div>
-              {hasPersonalizedData ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {personalizedDishes.map((title) => (
-                    <span key={title} className="rounded-full border border-white/15 px-2 py-1 text-xs text-gray-200">
-                      {title}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-2 text-xs text-gray-400">
-                  {isLoadingPreferences
-                    ? isAmharic
-                      ? "የምርጫ ታሪክዎ በመጫን ላይ..."
-                      : "Loading your preference history..."
-                    : isAmharic
-                      ? "የግል ምክሮችን ለማስከፈት መጀመሪያ ጥቂት ትዕዛዞችን ያስገቡ።"
-                      : "Place a few orders first to unlock personalized suggestions."}
-                </p>
-              )}
-            </div>
-          ) : null}
-
-          <label className="block text-sm text-gray-300">
-            {isAmharic ? "ተወዳጅ ምግብዎ ምንድን ነው?" : "What is your favorite recipe or dish?"}
-            <input
-              value={answers.favoriteRecipe}
-              onChange={(event) =>
-                setAnswers((prev) => ({
-                  ...prev,
-                  favoriteRecipe: event.target.value,
-                }))
-              }
-              placeholder={isAmharic ? "ለምሳሌ፡ ቅመም ኑድል፣ ጥብስ ዶሮ፣ እንጉዳይ ፓስታ" : "e.g. spicy noodles, grilled chicken, mushroom pasta"}
-              className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100 outline-none placeholder:text-gray-500"
-            />
-          </label>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <SelectField
-              label={isAmharic ? "የምግብ አይነት" : "Cuisine"}
-              value={answers.cuisine}
-              options={isAuthenticated ? ["For You", "Any", "Noodle", "Pasta", "Soup", "Grill", "Rice"] : ["Any", "Noodle", "Pasta", "Soup", "Grill", "Rice"]}
-              locale={locale}
-              onChange={(value) => setAnswers((prev) => ({ ...prev, cuisine: value }))}
-            />
-            <SelectField
-              label={isAmharic ? "የቅመም ደረጃ" : "Spice Level"}
-              value={answers.spiceLevel}
-              options={isAuthenticated ? ["For You", "Mild", "Medium", "Spicy"] : ["Mild", "Medium", "Spicy"]}
-              locale={locale}
-              onChange={(value) => setAnswers((prev) => ({ ...prev, spiceLevel: value }))}
-            />
-            <SelectField
-              label={isAmharic ? "በጀት" : "Budget"}
-              value={answers.budget}
-              options={isAuthenticated ? ["For You", "Low", "Medium", "High"] : ["Low", "Medium", "High"]}
-              locale={locale}
-              onChange={(value) => setAnswers((prev) => ({ ...prev, budget: value }))}
-            />
-            <SelectField
-              label={isAmharic ? "የአመጋገብ ምርጫ" : "Dietary"}
-              value={answers.dietary}
-              options={isAuthenticated ? ["For You", "No preference", "Vegetarian", "High-protein"] : ["No preference", "Vegetarian", "High-protein"]}
-              locale={locale}
-              onChange={(value) => setAnswers((prev) => ({ ...prev, dietary: value }))}
-            />
-            <SelectField
-              label={isAmharic ? "የምግብ ክፍል" : "Meal Type"}
-              value={answers.mealType}
-              options={isAuthenticated ? ["For You", "Light", "Filling"] : ["Light", "Filling"]}
-              locale={locale}
-              onChange={(value) => setAnswers((prev) => ({ ...prev, mealType: value }))}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={generate}
-              disabled={isLoading}
-              className="app-bg-accent rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isLoading ? (isAmharic ? "በማሰብ ላይ..." : "Thinking...") : isAmharic ? "ምክሮችን አግኝ" : "Get recommendations"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setAnswers(initialAnswers);
-                setRecommendations([]);
-                setSource("");
-                setErrorMessage("");
-                setFallbackReason("");
-              }}
-              className="app-hover-accent-soft rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200"
-            >
-              {isAmharic ? "ዳግም አስጀምር" : "Reset"}
-            </button>
-
-            {source ? (
-              <span className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-gray-300">
-                {isAmharic ? "ምንጭ:" : "Source:"} {source === "gemini" ? "Gemini AI" : isAmharic ? "ተተኪ ስርዓት" : "Fallback engine"}
-              </span>
-            ) : null}
-          </div>
-
-          {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
-          {!errorMessage && source === "rule-based" && fallbackReason ? (
-            <p className="text-xs text-amber-300">{isAmharic ? "የተተኪ ምክንያት:" : "Fallback reason:"} {fallbackReason}</p>
-          ) : null}
-
-          {recommendations.length > 0 ? (
-            <div className="space-y-3 rounded-xl border border-white/10 app-bg-elevated p-3">
-              <p className="text-sm font-semibold text-gray-200">{isAmharic ? "ለእርስዎ የተመከሩ" : "Recommended for you"}</p>
-
-              {recommendations.map((item, index) => {
-                const dish = byTitle.get(item.title);
-                return (
-                  <div
-                    key={`${item.title}-${index}`}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-100">{item.title}</p>
-                      <p className="text-xs text-gray-400">{item.reason}</p>
-                    </div>
-
+            <div className="mt-6 space-y-5">
+              {isAuthenticated ? (
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-orange-200">
+                      ⭐ {isAmharic ? "ለእርስዎ" : "For You"}
+                    </p>
                     <button
                       type="button"
-                      disabled={!dish}
-                      onClick={() => {
-                        if (dish) {
-                          onAddDish(dish);
-                        }
-                      }}
-                      className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={applyForYouMode}
+                      disabled={!hasPersonalizedData || isLoadingPreferences}
+                      className="app-bg-accent rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isAmharic ? "ወደ ትዕዛዝ ጨምር" : "Add to order"}
+                      {isAmharic ? "ያለፉ ትዕዛዞቼን ተጠቀም" : "Use my history"}
                     </button>
                   </div>
-                );
-              })}
-            </div>
-          ) : null}
+
+                  {hasPersonalizedData ? (
+                    <div className="flex flex-wrap gap-2">
+                      {personalizedDishes.map((title) => (
+                        <span
+                          key={title}
+                          className="rounded-full border border-orange-400/40 bg-orange-500/30 px-2.5 py-1 text-xs text-orange-100"
+                        >
+                          {title}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-300">
+                      {isLoadingPreferences
+                        ? isAmharic
+                          ? "የምርጫ ታሪክዎ በመጫን ላይ..."
+                          : "Loading your preference history..."
+                        : isAmharic
+                          ? "የግል ምክሮችን ለማግኘት ጥቂት ትዕዛዞች ያስገቡ።"
+                          : "Place a few orders first to unlock personalized suggestions."}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <textarea
+                value={answers.favoriteRecipe}
+                onChange={(event) =>
+                  setAnswers((prev) => ({
+                    ...prev,
+                    favoriteRecipe: event.target.value,
+                  }))
+                }
+                placeholder={
+                  isAmharic
+                    ? "ለምሳሌ፡ ቅመም ኑድል፣ ጥብስ ዶሮ፣ ፓስታ..."
+                    : "e.g. spicy noodles, grilled chicken, creamy pasta..."
+                }
+                className="app-bg-elevated w-full rounded-xl border border-white/15 px-4 py-3 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30"
+                rows={2}
+              />
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SelectField
+                  label={isAmharic ? "የምግብ አይነት" : "Cuisine"}
+                  value={answers.cuisine}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "Any", "Noodle", "Pasta", "Soup", "Grill", "Rice", "Mediterranean", "Asian", "Local"]
+                      : ["Any", "Noodle", "Pasta", "Soup", "Grill", "Rice", "Mediterranean", "Asian", "Local"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, cuisine: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "የቅመም ደረጃ" : "Spice Level"}
+                  value={answers.spiceLevel}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "Mild", "Medium", "Spicy", "Very Spicy"]
+                      : ["Mild", "Medium", "Spicy", "Very Spicy"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, spiceLevel: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "በጀት" : "Budget"}
+                  value={answers.budget}
+                  options={isAuthenticated ? ["For You", "Low", "Medium", "High", "Premium"] : ["Low", "Medium", "High", "Premium"]}
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, budget: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "የአመጋገብ ምርጫ" : "Dietary"}
+                  value={answers.dietary}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "No preference", "Vegetarian", "Vegan", "High-protein", "Low-carb"]
+                      : ["No preference", "Vegetarian", "Vegan", "High-protein", "Low-carb"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, dietary: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "የምግብ ክፍል" : "Meal Type"}
+                  value={answers.mealType}
+                  options={isAuthenticated ? ["For You", "Light", "Filling", "Balanced"] : ["Light", "Filling", "Balanced"]}
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, mealType: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "ሁኔታ" : "Occasion"}
+                  value={answers.occasion}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "Casual", "Business", "Celebration", "Quick bite"]
+                      : ["Casual", "Business", "Celebration", "Quick bite"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, occasion: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "ፕሮቲን" : "Protein Type"}
+                  value={answers.proteins}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "Any", "Chicken", "Beef", "Seafood", "Egg", "Plant-based"]
+                      : ["Any", "Chicken", "Beef", "Seafood", "Egg", "Plant-based"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, proteins: value }))}
+                />
+
+                <SelectField
+                  label={isAmharic ? "ገደብ" : "Restrictions"}
+                  value={answers.restrictions}
+                  options={
+                    isAuthenticated
+                      ? ["For You", "None", "Gluten-free", "Dairy-free", "Nut-free"]
+                      : ["None", "Gluten-free", "Dairy-free", "Nut-free"]
+                  }
+                  locale={locale}
+                  onChange={(value) => setAnswers((prev) => ({ ...prev, restrictions: value }))}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={generate}
+                  disabled={isLoading}
+                  className="min-w-fit flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:from-orange-400 hover:to-orange-500 hover:shadow-orange-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoading
+                    ? isAmharic
+                      ? " በማሰብ ላይ..."
+                      : " Thinking..."
+                    : isAmharic
+                      ? " ምክሮችን አግኝ"
+                      : " Get recommendations"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnswers(initialAnswers);
+                    setRecommendations([]);
+                    setSource("");
+                    setErrorMessage("");
+                    setFallbackReason("");
+                  }}
+                  className="rounded-xl border border-white/20 bg-white/5 px-4 py-3 font-semibold text-gray-200 transition-colors hover:bg-white/10"
+                >
+                  {isAmharic ? "ዳግም" : "Reset"}
+                </button>
+
+                {source ? (
+                  <span className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs text-gray-300">
+                    {source === "gemini"
+                      ? "⚡ Gemini AI"
+                      : isAmharic
+                        ? "⚙️ ተተኪ ስርዓት"
+                        : "⚙️ Smart Engine"}
+                  </span>
+                ) : null}
+              </div>
+
+              {errorMessage ? (
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              {!errorMessage && source === "rule-based" && fallbackReason ? (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                   {isAmharic ? "ማስታወሻ:" : "Note:"} {fallbackReason}
+                </p>
+              ) : null}
+
+              {recommendations.length > 0 ? (
+                <div className="space-y-2 rounded-2xl border border-orange-500/30 bg-orange-500/5 p-4">
+                  <p className="text-sm font-bold text-orange-200">
+                     {isAmharic ? "ለእርስዎ የተመከሩ" : "Recommended for you"}
+                  </p>
+
+                  {recommendations.map((item, index) => {
+                    const dish = byTitle.get(item.title);
+
+                    return (
+                      <div
+                        key={`${item.title}-${index}`}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 transition-all hover:bg-white/10"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-white">{item.title}</p>
+                          <p className="text-xs text-gray-400">{item.reason}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={!dish}
+                          onClick={() => {
+                            if (dish) {
+                              onAddDish(dish);
+                            }
+                          }}
+                          className="app-bg-accent whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isAmharic ? "ጨምር" : "Add"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -448,25 +547,46 @@ function SelectField({ label, value, options, locale, onChange }: SelectFieldPro
     Soup: "ሾርባ",
     Grill: "ግሪል",
     Rice: "ሩዝ",
+    Mediterranean: "ሜዲትራኒያን",
+    Asian: "እስያዊ",
+    Local: "አካባቢያዊ",
     Mild: "ቀላል",
     Medium: "መካከለኛ",
-    Spicy: "ቅመም ያለው",
+    Spicy: "ቅመም",
+    "Very Spicy": "በጣም ቅመም",
     Low: "ዝቅተኛ",
     High: "ከፍተኛ",
+    Premium: "ፕሪሚየም",
     "No preference": "ምንም ምርጫ የለም",
     Vegetarian: "ቬጀቴሪያን",
+    Vegan: "ቪጋን",
     "High-protein": "ከፍተኛ ፕሮቲን",
+    "Low-carb": "ዝቅተኛ ካርብ",
     Light: "ቀላል",
-    Filling: "ሙሉ የሚያደርግ",
+    Filling: "ሙሉ",
+    Balanced: "ሚዛናዊ",
+    Casual: "መደበኛ",
+    Business: "ቢዝነስ",
+    Celebration: "ክብረ በዓል",
+    "Quick bite": "ፈጣን ምግብ",
+    Chicken: "ዶሮ",
+    Beef: "ስጋ",
+    Seafood: "የባህር ምግብ",
+    Egg: "እንቁላል",
+    "Plant-based": "ከእፅዋት",
+    "Gluten-free": "ግሉተን-ነፃ",
+    "Dairy-free": "ወተት-ነፃ",
+    "Nut-free": "ነት-ነፃ",
+    None: "ምንም የለም",
   };
 
   return (
-    <label className="block text-sm text-gray-300">
+    <label className="block text-sm font-medium text-gray-300">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="app-bg-elevated mt-2 h-11 w-full rounded-xl border border-white/10 px-3 text-gray-100 outline-none"
+        className="app-bg-elevated mt-2 w-full rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-100 outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30"
       >
         {options.map((option) => (
           <option key={option} value={option}>

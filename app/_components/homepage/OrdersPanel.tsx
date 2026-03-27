@@ -19,6 +19,11 @@ type OrdersPanelProps = {
   onOrderTypeChange: (type: string) => void;
 };
 
+function isDeliveryType(orderType: string) {
+  const normalized = orderType.trim().toLowerCase();
+  return normalized === "delivery" || normalized === "ዴሊቨሪ";
+}
+
 export default function OrdersPanel({
   orderTypes,
   selectedOrderType,
@@ -38,6 +43,7 @@ export default function OrdersPanel({
   const [locationError, setLocationError] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const hasItems = orderItems.length > 0;
+  const selectedIsDelivery = isDeliveryType(selectedOrderType);
 
   const handleUseCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
@@ -66,7 +72,8 @@ export default function OrdersPanel({
       <aside className="app-bg-panel flex w-full flex-col border-t border-white/8 px-4 py-5 md:px-6 md:py-6 xl:h-screen xl:w-98.75 xl:border-l xl:border-t-0">
         <div className="border-b border-white/8 pb-5">
           <h2 className="text-2xl font-semibold text-white">
-            {isAmharic ? "ትዕዛዞች" : "Orders"} {orderSummary.orderNumber}
+            {isAmharic ? "ትዕዛዞች" : "Orders"}
+            {orderSummary.orderNumber ? ` ${orderSummary.orderNumber}` : ""}
           </h2>
 
           <OrderTypeTabs
@@ -84,7 +91,7 @@ export default function OrdersPanel({
           </div>
         </div>
 
-        {selectedOrderType === "Delivery" ? (
+        {selectedIsDelivery ? (
           <div className="mt-4 rounded-xl border border-white/8 p-3">
             <label className="text-sm font-medium text-gray-200" htmlFor="delivery-customer-name">
               {isAmharic ? "የደንበኛ ስም" : "Customer Name"}

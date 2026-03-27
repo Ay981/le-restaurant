@@ -1,13 +1,40 @@
 import Link from "next/link";
 import Image from "next/image";
-import { dishes } from "@/lib/data";
 import { formatCurrency } from "@/lib/currency";
 import { t } from "@/lib/i18n/messages";
 import { getServerLocale } from "@/lib/i18n/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+type ProductDish = {
+  title: string;
+  price: number;
+  image_url: string | null;
+  availability_count: number;
+};
+
+async function getProductDishes() {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("dishes")
+      .select("title, price, image_url, availability_count")
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(8);
+
+    if (error || !data) {
+      return [] as ProductDish[];
+    }
+
+    return data as ProductDish[];
+  } catch {
+    return [] as ProductDish[];
+  }
+}
 
 export default async function ProductsPage() {
   const locale = await getServerLocale();
-  const menuItems = dishes.slice(0, 8);
+  const menuItems = await getProductDishes();
   const stats = [
     { label: "Featured Dishes", value: `${menuItems.length}` },
     { label: "Popular Categories", value: "4" },
@@ -45,10 +72,18 @@ export default async function ProductsPage() {
           {menuItems.map((dish) => (
             <article key={dish.title} className="app-bg-panel rounded-2xl border border-white/10 p-3">
               <div className="h-32 overflow-hidden rounded-xl border border-white/10">
-                <Image src={dish.image} alt={dish.title} width={360} height={180} className="h-full w-full object-cover" />
+                <Image
+                  src={dish.image_url || "/image/pizza.png"}
+                  alt={dish.title}
+                  width={360}
+                  height={180}
+                  className="h-full w-full object-cover"
+                />
               </div>
               <p className="mt-3 text-sm font-semibold text-white">{dish.title}</p>
-              <p className="mt-1 text-xs text-gray-400">{dish.availability}</p>
+              <p className="mt-1 text-xs text-gray-400">
+                {locale === "am" ? `${dish.availability_count} ሳህኖች ይገኛሉ` : `${dish.availability_count} Bowls available`}
+              </p>
               <p className="mt-2 text-sm font-medium text-gray-100">{formatCurrency(dish.price)}</p>
             </article>
           ))}

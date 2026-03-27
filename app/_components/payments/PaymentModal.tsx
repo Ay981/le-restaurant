@@ -23,6 +23,11 @@ type PaymentModalProps = {
 
 type PaymentMethod = "bankTransfer" | "cash" | "teleBirr" | "mpesa";
 
+function isDeliveryType(orderType: string) {
+  const normalized = orderType.trim().toLowerCase();
+  return normalized === "delivery" || normalized === "ዴሊቨሪ";
+}
+
 export default function PaymentModal({
   orderItems,
   orderSummary,
@@ -113,7 +118,7 @@ export default function PaymentModal({
       return createdOrderNumber;
     }
 
-    const isDelivery = selectedOrderType.trim().toLowerCase() === "delivery";
+    const isDelivery = isDeliveryType(selectedOrderType);
     if (
       isDelivery &&
       (!deliveryDetails.destination.trim() || !deliveryDetails.customerName.trim() || !deliveryDetails.customerPhone.trim())
@@ -210,7 +215,7 @@ export default function PaymentModal({
       return;
     }
 
-    const isDelivery = selectedOrderType.trim().toLowerCase() === "delivery";
+    const isDelivery = isDeliveryType(selectedOrderType);
     if (
       isDelivery &&
       (!deliveryDetails.destination.trim() || !deliveryDetails.customerName.trim() || !deliveryDetails.customerPhone.trim())

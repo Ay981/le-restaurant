@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-type UiOrderStatus = "pending" | "in_progress" | "delivered" | "unknown";
+type UiOrderStatus = "pending" | "in_progress" | "delivered" | "rejected" | "unknown";
 
 type CustomerOrder = {
   id: string;
@@ -17,6 +17,7 @@ type CustomerOrder = {
   startedAt: string | null;
   deliveredAt: string | null;
   note: string | null;
+  adminDecisionNote: string | null;
   items: Array<{
     dishTitle: string;
     quantity: number;
@@ -34,6 +35,7 @@ type OrderRow = {
   started_at: string | null;
   delivered_at: string | null;
   note: string | null;
+  admin_decision_note: string | null;
   order_items:
     | Array<{
         dish_title_snapshot: string;
@@ -67,14 +69,16 @@ type OrderNotification = {
 function toUiStatus(status: string): UiOrderStatus {
   if (status === "pending") return "pending";
   if (status === "preparing") return "in_progress";
+  if (status === "cancelled") return "rejected";
   if (status === "served" || status === "completed") return "delivered";
   return "unknown";
 }
 
 function statusLabel(status: UiOrderStatus) {
   if (status === "pending") return "Pending";
-  if (status === "in_progress") return "In Progress";
+  if (status === "in_progress") return "Accepted";
   if (status === "delivered") return "Delivered";
+  if (status === "rejected") return "Rejected";
   return "Unknown";
 }
 
@@ -82,6 +86,7 @@ function statusClass(status: UiOrderStatus) {
   if (status === "pending") return "bg-amber-500/20 text-amber-300";
   if (status === "in_progress") return "bg-indigo-500/20 text-indigo-300";
   if (status === "delivered") return "bg-emerald-500/20 text-emerald-300";
+  if (status === "rejected") return "bg-rose-500/20 text-rose-300";
   return "bg-gray-500/20 text-gray-300";
 }
 
@@ -143,7 +148,7 @@ export default function MyOrdersPage() {
     const { data, error } = await supabase
       .from("orders")
       .select(
-        "id, order_number, order_type, status, total, created_at, started_at, delivered_at, note, order_items(dish_title_snapshot, quantity, line_total)",
+        "id, order_number, order_type, status, total, created_at, started_at, delivered_at, note, admin_decision_note, order_items(dish_title_snapshot, quantity, line_total)",
       )
       .eq("customer_user_id", session.user.id)
       .order("created_at", { ascending: false })
@@ -165,6 +170,7 @@ export default function MyOrdersPage() {
       startedAt: order.started_at,
       deliveredAt: order.delivered_at,
       note: order.note,
+      adminDecisionNote: order.admin_decision_note,
       items: (order.order_items ?? []).map((item) => ({
         dishTitle: item.dish_title_snapshot,
         quantity: Number(item.quantity) || 0,
@@ -354,7 +360,8 @@ export default function MyOrdersPage() {
     const pending = orders.filter((order) => order.status === "pending").length;
     const inProgress = orders.filter((order) => order.status === "in_progress").length;
     const delivered = orders.filter((order) => order.status === "delivered").length;
-    return { pending, inProgress, delivered };
+    const rejected = orders.filter((order) => order.status === "rejected").length;
+    return { pending, inProgress, delivered, rejected };
   }, [orders]);
 
   const unreadNotificationsCount = notifications.filter((notification) => !notification.isRead).length;
@@ -395,18 +402,22 @@ export default function MyOrdersPage() {
             </Link>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-white/10 p-3">
               <p className="text-xs text-gray-400">Pending</p>
               <p className="mt-1 text-xl font-semibold text-amber-300">{totals.pending}</p>
             </div>
             <div className="rounded-xl border border-white/10 p-3">
-              <p className="text-xs text-gray-400">In Progress</p>
+              <p className="text-xs text-gray-400">Accepted</p>
               <p className="mt-1 text-xl font-semibold text-indigo-300">{totals.inProgress}</p>
             </div>
             <div className="rounded-xl border border-white/10 p-3">
               <p className="text-xs text-gray-400">Delivered</p>
               <p className="mt-1 text-xl font-semibold text-emerald-300">{totals.delivered}</p>
+            </div>
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3">
+              <p className="text-xs text-rose-200/85">Rejected</p>
+              <p className="mt-1 text-xl font-semibold text-rose-300">{totals.rejected}</p>
             </div>
           </div>
 
@@ -488,6 +499,7 @@ export default function MyOrdersPage() {
               </div>
 
               {order.note ? <p className="mt-3 text-xs text-gray-400">Note: {order.note}</p> : null}
+              {order.adminDecisionNote ? <p className="mt-2 rounded-lg border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs text-rose-200">Rejection reason: {order.adminDecisionNote}</p> : null}
 
               {order.status === "delivered" ? (
                 <div className="mt-4 rounded-xl border border-white/10 p-3">

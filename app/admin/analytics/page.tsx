@@ -42,103 +42,6 @@ const TIME_RANGE_OPTIONS: { key: TimeRange; label: string }[] = [
   { key: "30d", label: "30 Days" },
 ];
 
-function daysAgoIso(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-}
-
-const MOCK_DISHES: DishLiteRow[] = [
-  { title: "Spicy seasoned seafood noodles", image_url: "/image/pizza.png" },
-  { title: "Salted pasta with mushroom sauce", image_url: "/image/pizza.png" },
-  { title: "Beef dumpling in hot and sour soup", image_url: "/image/pizza.png" },
-  { title: "Hot spicy fried rice with omelet", image_url: "/image/pizza.png" },
-  { title: "Chicken fried rice", image_url: "/image/pizza.png" },
-];
-
-const MOCK_ORDERS: OrderAnalyticsRow[] = [
-  {
-    id: "mock-1",
-    order_number: "#A-1001",
-    order_type: "dine_in",
-    status: "completed",
-    total: 125,
-    created_at: daysAgoIso(6),
-    customer_user_id: "c-1",
-    order_items: [{ dish_title_snapshot: "Spicy seasoned seafood noodles", quantity: 2 }],
-  },
-  {
-    id: "mock-2",
-    order_number: "#A-1002",
-    order_type: "delivery",
-    status: "served",
-    total: 145,
-    created_at: daysAgoIso(5),
-    customer_user_id: "c-2",
-    order_items: [{ dish_title_snapshot: "Salted pasta with mushroom sauce", quantity: 2 }],
-  },
-  {
-    id: "mock-3",
-    order_number: "#A-1003",
-    order_type: "to_go",
-    status: "pending",
-    total: 105,
-    created_at: daysAgoIso(4),
-    customer_user_id: "c-3",
-    order_items: [{ dish_title_snapshot: "Beef dumpling in hot and sour soup", quantity: 1 }],
-  },
-  {
-    id: "mock-4",
-    order_number: "#A-1004",
-    order_type: "dine_in",
-    status: "completed",
-    total: 45,
-    created_at: daysAgoIso(3),
-    customer_user_id: "c-4",
-    order_items: [{ dish_title_snapshot: "Hot spicy fried rice with omelet", quantity: 1 }],
-  },
-  {
-    id: "mock-5",
-    order_number: "#A-1005",
-    order_type: "delivery",
-    status: "completed",
-    total: 245,
-    created_at: daysAgoIso(2),
-    customer_user_id: "c-1",
-    order_items: [{ dish_title_snapshot: "Spicy seasoned seafood noodles", quantity: 3 }],
-  },
-  {
-    id: "mock-6",
-    order_number: "#A-1006",
-    order_type: "to_go",
-    status: "preparing",
-    total: 178,
-    created_at: daysAgoIso(1),
-    customer_user_id: "c-5",
-    order_items: [{ dish_title_snapshot: "Chicken fried rice", quantity: 2 }],
-  },
-  {
-    id: "mock-7",
-    order_number: "#A-1007",
-    order_type: "dine_in",
-    status: "completed",
-    total: 98,
-    created_at: daysAgoIso(1),
-    customer_user_id: "c-2",
-    order_items: [{ dish_title_snapshot: "Salted pasta with mushroom sauce", quantity: 1 }],
-  },
-  {
-    id: "mock-8",
-    order_number: "#A-1008",
-    order_type: "delivery",
-    status: "completed",
-    total: 210,
-    created_at: daysAgoIso(0),
-    customer_user_id: "c-6",
-    order_items: [{ dish_title_snapshot: "Beef dumpling in hot and sour soup", quantity: 2 }],
-  },
-];
-
 function getRangeStart(range: TimeRange) {
   const start = new Date();
   if (range === "today") {
@@ -201,25 +104,15 @@ export default function AdminAnalyticsPage() {
     const fetchedOrders = (ordersData ?? []) as OrderAnalyticsRow[];
     const fetchedDishes = (dishesData ?? []) as DishLiteRow[];
 
-    if (ordersError || dishesError || fetchedOrders.length === 0) {
-      setOrders(MOCK_ORDERS);
-      setDishes(fetchedDishes.length > 0 ? fetchedDishes : MOCK_DISHES);
-      setErrorMessage(
-        ordersError || dishesError
-          ? isAmharic
-            ? "የቀጥታ ትንታኔ መጫን አልተቻለም። ለሙከራ ናሙና ውሂብ ታይቷል።"
-            : "Live analytics failed to load. Showing sample data for testing."
-          : isAmharic
-            ? "ምንም የቀጥታ ትንታኔ አልተገኘም። ለሙከራ ናሙና ውሂብ ታይቷል።"
-            : "No live analytics found. Showing sample data for testing.",
-      );
-      setIsLoading(false);
-      return;
-    }
-
     setOrders(fetchedOrders);
     setDishes(fetchedDishes);
-    setErrorMessage(null);
+    setErrorMessage(
+      ordersError || dishesError
+        ? isAmharic
+          ? "የቀጥታ ትንታኔ መጫን አልተቻለም።"
+          : "Could not load live analytics data."
+        : null,
+    );
     setIsLoading(false);
   }, [isAmharic]);
 

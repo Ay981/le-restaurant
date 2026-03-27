@@ -2,8 +2,6 @@ import HomeDashboard from "@/app/_components/homepage/HomeDashboard";
 import Sidenav from "@/components/navigation/Sidenav";
 import {
   categories,
-  dishes,
-  orderSummary,
   restaurantInfo,
 } from "@/lib/data";
 import type { Dish } from "@/lib/data";
@@ -90,7 +88,7 @@ async function getMenuData(locale: Locale) {
     if (categoryError || dishesError || !categoryData || !dishesData) {
       return {
         menuCategories: [...categories],
-        menuDishes: dishes,
+        menuDishes: [],
       };
     }
 
@@ -119,25 +117,12 @@ async function getMenuData(locale: Locale) {
     return {
       menuCategories:
         menuCategories.length > 0 ? menuCategories : categories.map((category) => translateCategory(category, locale)),
-      menuDishes:
-        menuDishes.length > 0
-          ? menuDishes
-          : dishes.map((dish) => ({
-              ...dish,
-              availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
-              categories: dish.categories.map((category) => translateCategory(category, locale)),
-              isActive: dish.isActive,
-            })),
+      menuDishes,
     };
   } catch {
     return {
       menuCategories: categories.map((category) => translateCategory(category, locale)),
-      menuDishes: dishes.map((dish) => ({
-        ...dish,
-        availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
-        categories: dish.categories.map((category) => translateCategory(category, locale)),
-        isActive: dish.isActive,
-      })),
+      menuDishes: [],
     };
   }
 }
@@ -169,7 +154,11 @@ export default async function MenuPage() {
           dishes={menuDishes}
           orderTypes={localizedOrderTypes}
           initialOrderItems={[]}
-          initialOrderSummary={orderSummary}
+          initialOrderSummary={{
+            orderNumber: "",
+            discount: 0,
+            subtotal: 0,
+          }}
         />
       </div>
     </main>
