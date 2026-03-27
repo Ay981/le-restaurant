@@ -19,6 +19,7 @@ Applied migration files (in order):
 11. `202603230300_receipt_metadata_and_match_checks.sql`
 12. `202603270100_receipt_review_and_staff_notifications.sql`
 13. `202603270200_order_admin_decision_note.sql`
+14. `202603270300_security_policy_hardening.sql`
 
 Release-critical schema points:
 - Admin/staff order workflow tables and audit entries are active.
@@ -73,21 +74,11 @@ Emergency fallback (if absolutely required):
 
 ## 3) Credential Handoff (Admin/Staff)
 
-Current operational credentials created for this project:
-
-- Admin:
-  - Email: `admin@myrestaurant.local`
-  - Password: `Admin@2026Secure!`
-  - Role: `admin`
-
-- Staff:
-  - Email: `staff@myrestaurant.local`
-  - Password: `Staff@2026Secure!`
-  - Role: `staff`
+Credentials must never be stored in git. Use your organization's secret manager/runbook for all admin and staff account handoff data.
 
 Security handoff actions (required before production go-live):
-1. Rotate both passwords immediately.
-2. Replace `.local` accounts with organization-owned emails.
+1. Rotate all existing admin/staff passwords immediately.
+2. Replace temporary accounts with organization-owned emails.
 3. Enforce password reset on first login.
 4. Store credentials only in approved secret manager/runbook.
 5. Validate role assignment in `profiles` after rotation.

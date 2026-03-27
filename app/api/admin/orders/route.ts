@@ -78,6 +78,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const query = (searchParams.get("q") ?? "").trim();
+    const escapedQuery = query.replace(/[%_,]/g, "").trim();
     const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("pageSize") ?? "20", 10) || 20));
     const from = (page - 1) * pageSize;
@@ -95,9 +96,9 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    if (query) {
+    if (escapedQuery) {
       queryBuilder = queryBuilder.or(
-        `order_number.ilike.%${query}%,customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%,delivery_address.ilike.%${query}%`,
+        `order_number.ilike.%${escapedQuery}%,customer_name.ilike.%${escapedQuery}%,customer_phone.ilike.%${escapedQuery}%,delivery_address.ilike.%${escapedQuery}%`,
       );
     }
 

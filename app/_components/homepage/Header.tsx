@@ -28,6 +28,7 @@ export default function Header({
         <FiSearch className="text-base" />
         <input
           type="text"
+          aria-label="Search dishes"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={searchPlaceholder}

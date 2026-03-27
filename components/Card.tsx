@@ -4,17 +4,17 @@ import { formatCurrency } from "@/lib/currency";
 type CardProps = {
     title: string;
     image: string;
-    price?: number;
-    availability?: string;
+    price: number;
+    availability: string;
     isDisabled?: boolean;
     onClick?: () => void;
 };
 
 export default function Card({
-    title = "Spicy seasoned seafood noodles",
+    title,
     image,
-    price = 2.29,
-    availability = "20 Bowls available",
+    price,
+    availability,
     isDisabled = false,
     onClick,
 }: CardProps) {

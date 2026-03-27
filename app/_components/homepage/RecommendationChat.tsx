@@ -191,12 +191,35 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
     }
 
     try {
+      const supabase = createBrowserSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token ?? null;
+      if (!accessToken) {
+        setErrorMessage(
+          isAmharic ? "ምክሮችን ለማግኘት እባክዎ በመጀመሪያ ይግቡ።" : "Please sign in to get recommendations.",
+        );
+        setRecommendations([]);
+        setSource("");
+        setFallbackReason("");
+        return;
+      }
+
       const response = await fetch("/api/chat/recommend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ answers: preparedAnswers, dishes }),
+        body: JSON.stringify({
+          answers: preparedAnswers,
+          dishes: dishes.map((dish) => ({
+            title: dish.title,
+            price: dish.price,
+            categories: dish.categories,
+          })),
+        }),
       });
 
       const payload = (await response.json()) as {
@@ -259,6 +282,9 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
       {isOpen ? (
         <div
           className="fixed inset-0 z-50 bg-black/70 px-4 py-5 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label={isAmharic ? "የምግብ ምክር ሞዳል" : "Food recommendations dialog"}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setIsOpen(false);
@@ -279,6 +305,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="rounded-xl border border-white/15 bg-white/5 p-2 text-white transition-colors hover:bg-white/10"
+                aria-label={isAmharic ? "ምክር መስኮቱን ዝጋ" : "Close recommendations dialog"}
               >
                 ✕
               </button>

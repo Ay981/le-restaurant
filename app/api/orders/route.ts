@@ -4,7 +4,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type CheckoutItem = {
   title: string;
-  price: number;
   quantity: number;
   note?: string;
 };
@@ -55,7 +54,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: authResult.message }, { status: authResult.status });
     }
 
-    const body = (await request.json()) as CheckoutPayload;
+    let body: CheckoutPayload;
+    try {
+      body = (await request.json()) as CheckoutPayload;
+    } catch {
+      return NextResponse.json({ message: "Invalid JSON body." }, { status: 400 });
+    }
 
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) {
@@ -64,24 +68,88 @@ export async function POST(request: Request) {
 
     const normalizedItems = items.map((item) => ({
       title: String(item.title ?? "").trim(),
-      price: Number(item.price ?? 0),
       quantity: Number(item.quantity ?? 0),
       note: typeof item.note === "string" ? item.note.trim() : "",
     }));
 
     const hasInvalidItem = normalizedItems.some(
-      (item) => !item.title || !Number.isFinite(item.price) || item.price < 0 || !Number.isInteger(item.quantity) || item.quantity <= 0,
+      (item) => !item.title || !Number.isInteger(item.quantity) || item.quantity <= 0,
     );
 
     if (hasInvalidItem) {
       return NextResponse.json(
-        { message: "Each item must include title, non-negative price, and quantity greater than 0." },
+        { message: "Each item must include title and quantity greater than 0." },
         { status: 400 },
       );
     }
 
+    const uniqueTitles = [...new Set(normalizedItems.map((item) => item.title))];
+    const supabase = createSupabaseAdminClient();
+    const { data: dishRows, error: dishLookupError } = await supabase
+      .from("dishes")
+      .select("id, title, price, is_active")
+      .in("title", uniqueTitles);
+
+    if (dishLookupError) {
+      return NextResponse.json({ message: "Could not validate order items." }, { status: 400 });
+    }
+
+    const dishByTitle = new Map(
+      (dishRows ?? []).map((row) => [
+        String(row.title),
+        {
+          id: String(row.id),
+          price: Number(row.price ?? 0),
+          isActive: Boolean(row.is_active),
+        },
+      ]),
+    );
+
+    const unknownOrInactiveDish = uniqueTitles.find((title) => {
+      const dish = dishByTitle.get(title);
+      return !dish || !dish.isActive;
+    });
+    if (unknownOrInactiveDish) {
+      return NextResponse.json(
+        { message: `Dish is unavailable: ${unknownOrInactiveDish}` },
+        { status: 400 },
+      );
+    }
+
+    const normalizedItemsWithPrice = normalizedItems.map((item) => {
+      const dish = dishByTitle.get(item.title);
+      if (!dish) {
+        return null;
+      }
+
+      return {
+        title: item.title,
+        dishId: dish.id,
+        quantity: item.quantity,
+        note: item.note,
+        unitPrice: dish.price,
+      };
+    });
+
+    if (normalizedItemsWithPrice.some((item) => item === null)) {
+      return NextResponse.json({ message: "Could not validate order items." }, { status: 400 });
+    }
+    const validatedItems = normalizedItemsWithPrice.filter(
+      (
+        item,
+      ): item is {
+        title: string;
+        dishId: string;
+        quantity: number;
+        note: string;
+        unitPrice: number;
+      } => item !== null,
+    );
+
     const orderType = mapOrderTypeToDb(body.selectedOrderType ?? "dine_in");
-    const subtotal = roundCurrency(normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
+    const subtotal = roundCurrency(
+      validatedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    );
     const discount = Number(body.discount ?? 0);
 
     if (!Number.isFinite(discount) || discount < 0 || discount > subtotal) {
@@ -106,7 +174,6 @@ export async function POST(request: Request) {
     }
 
     const orderNumber = buildOrderNumber();
-    const supabase = createSupabaseAdminClient();
 
     const { data: createdOrder, error: orderInsertError } = await supabase
       .from("orders")
@@ -131,10 +198,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderItemsPayload = normalizedItems.map((item) => ({
+    const orderItemsPayload = validatedItems.map((item) => ({
       order_id: createdOrder.id,
+      dish_id: item.dishId,
       dish_title_snapshot: item.title,
-      unit_price: item.price,
+      unit_price: item.unitPrice,
       quantity: item.quantity,
       note: item.note || null,
     }));

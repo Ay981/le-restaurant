@@ -127,8 +127,8 @@ async function getMenuData(locale: Locale) {
   }
 }
 
-function formatCurrentDate() {
-  return new Intl.DateTimeFormat("en-US", {
+function formatCurrentDate(locale: Locale) {
+  return new Intl.DateTimeFormat(locale === "am" ? "am-ET" : "en-US", {
     weekday: "long",
     day: "numeric",
     month: "short",
@@ -138,7 +138,7 @@ function formatCurrentDate() {
 
 export default async function MenuPage() {
   const locale = await getServerLocale();
-  const currentDate = formatCurrentDate();
+  const currentDate = formatCurrentDate(locale);
   const { menuCategories, menuDishes } = await getMenuData(locale);
   const localizedRestaurantInfo = mapRestaurantInfo(locale);
   const localizedOrderTypes = mapOrderTypes(locale);

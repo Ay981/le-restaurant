@@ -73,6 +73,7 @@ export default function OrderItemRow({
       <div className="mt-3 flex items-center gap-3">
         <input
           type="text"
+          value={item.note}
           onChange={(event) => onNoteChange(event.target.value)}
           placeholder={isAmharic ? "የትዕዛዝ ማስታወሻ..." : "Order Note..."}
           className="app-bg-elevated h-12 flex-1 rounded-lg border border-white/8 px-4 text-sm text-gray-300 outline-none"
@@ -81,6 +82,7 @@ export default function OrderItemRow({
           type="button"
           onClick={onRemove}
           className="app-border-accent app-text-accent app-hover-accent-soft flex h-12 w-12 items-center justify-center rounded-lg border transition-colors"
+          aria-label={isAmharic ? `${item.title} ከትዕዛዝ አስወግድ` : `Remove ${item.title} from order`}
         >
           <FiTrash2 className="text-lg" />
         </button>

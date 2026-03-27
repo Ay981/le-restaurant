@@ -1,4 +1,4 @@
-# My Restaurant POS Dashboard
+# My Restaurant v2 POS Dashboard
 
 A restaurant POS-style dashboard built with Next.js, React, TypeScript, Tailwind, and Supabase.
 The app currently includes:
@@ -130,6 +130,7 @@ Current migration set:
 - [supabase/migrations/202603230300_receipt_metadata_and_match_checks.sql](supabase/migrations/202603230300_receipt_metadata_and_match_checks.sql)
 - [supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql](supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql)
 - [supabase/migrations/202603270200_order_admin_decision_note.sql](supabase/migrations/202603270200_order_admin_decision_note.sql)
+- [supabase/migrations/202603270300_security_policy_hardening.sql](supabase/migrations/202603270300_security_policy_hardening.sql)
 
 Main tables:
 

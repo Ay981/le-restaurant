@@ -1,12 +1,13 @@
 {
-  "name": "my-restaurant",
-  "version": "0.1.0",
+  "name": "my-restaurant-v2",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "pnpm run test:receipt-helpers",
     "test:receipt-helpers": "tsx --test tests/receipt-helpers.test.ts"
   },
@@ -14,7 +15,6 @@
     "@supabase/supabase-js": "^2.99.2",
     "@vercel/analytics": "^2.0.1",
     "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "next": "16.1.6",
     "pdf-parse": "^2.4.5",

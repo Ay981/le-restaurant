@@ -22,12 +22,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "My Restaurant",
-    template: "%s | My Restaurant",
+    default: "My Restaurant v2",
+    template: "%s | My Restaurant v2",
   },
   description:
     "Discover fresh dishes, get AI-powered recommendations, place orders online, upload payment receipts, and track every order live from kitchen to delivery.",
-  applicationName: "My Restaurant",
+  applicationName: "My Restaurant v2",
   keywords: [
     "restaurant",
     "online food ordering",
@@ -41,17 +41,17 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "My Restaurant | Smart Ordering & Live Tracking",
+    title: "My Restaurant v2 | Smart Ordering & Live Tracking",
     description:
       "Browse the menu, get personalized dish recommendations, place orders, verify payments, and track status updates in real time.",
     url: "/",
-    siteName: "My Restaurant",
+    siteName: "My Restaurant v2",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "My Restaurant | Smart Ordering & Live Tracking",
+    title: "My Restaurant v2 | Smart Ordering & Live Tracking",
     description:
       "AI-powered food recommendations, seamless online ordering, payment verification, and live order tracking.",
   },

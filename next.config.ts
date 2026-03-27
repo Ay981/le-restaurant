@@ -15,22 +15,15 @@ const configuredSupabaseHost = (() => {
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "yemjqotvmhgltfrdohkw.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
-      ...(configuredSupabaseHost
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: configuredSupabaseHost,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
-        : []),
-    ],
+    remotePatterns: configuredSupabaseHost
+      ? [
+          {
+            protocol: "https" as const,
+            hostname: configuredSupabaseHost,
+            pathname: "/storage/v1/object/public/**",
+          },
+        ]
+      : [],
   },
 };
 

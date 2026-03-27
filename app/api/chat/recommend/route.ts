@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 type DishInput = {
   title: string;
@@ -52,6 +53,11 @@ function dedupeRecommendations(items: RecommendationItem[]) {
 const DEFAULT_GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"];
 const RETRYABLE_STATUS_CODES = new Set([429, 503]);
 const MAX_ATTEMPTS_PER_MODEL = 2;
+const MAX_DISHES_PER_REQUEST = 120;
+const MAX_TITLE_LENGTH = 140;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 function sleep(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -227,13 +233,14 @@ async function getGeminiRecommendations(
   let lastFailureReason = "Gemini request failed.";
 
   for (const model of modelsToTry) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -312,13 +319,109 @@ async function getGeminiRecommendations(
   };
 }
 
+function getBearerToken(request: Request): string | null {
+  const authorizationHeader = request.headers.get("authorization");
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const [scheme, token] = authorizationHeader.split(" ");
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return null;
+  }
+
+  return token;
+}
+
+function getSupabasePublicEnv() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Missing Supabase public env vars.");
+  }
+  return { supabaseUrl, supabaseAnonKey };
+}
+
+async function requireAuthenticatedUser(request: Request) {
+  const token = getBearerToken(request);
+  if (!token) {
+    return null;
+  }
+
+  const { supabaseUrl, supabaseAnonKey } = getSupabasePublicEnv();
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+function consumeRateLimit(key: string) {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+  if (!entry || entry.resetAt <= now) {
+    rateLimitStore.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return { allowed: true };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, retryAfterMs: entry.resetAt - now };
+  }
+
+  entry.count += 1;
+  rateLimitStore.set(key, entry);
+  return { allowed: true };
+}
+
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as RecommendationRequest;
+    const userId = await requireAuthenticatedUser(request);
+    if (!userId) {
+      return NextResponse.json(
+        { message: "Authentication required. Please sign in to use recommendations." },
+        { status: 401 },
+      );
+    }
+
+    const rate = consumeRateLimit(userId);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { message: "Rate limit exceeded. Please try again shortly." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rate.retryAfterMs ?? 0) / 1000)) } },
+      );
+    }
+
+    let body: RecommendationRequest;
+    try {
+      body = (await request.json()) as RecommendationRequest;
+    } catch {
+      return NextResponse.json({ message: "Invalid JSON body." }, { status: 400 });
+    }
+
     const dishes = Array.isArray(body?.dishes) ? body.dishes : [];
 
     if (dishes.length === 0) {
       return NextResponse.json({ message: "No dishes available for recommendations." }, { status: 400 });
+    }
+    if (dishes.length > MAX_DISHES_PER_REQUEST) {
+      return NextResponse.json({ message: "Too many dishes in one request." }, { status: 400 });
+    }
+    const hasInvalidDish = dishes.some(
+      (dish) =>
+        typeof dish?.title !== "string" ||
+        dish.title.trim().length === 0 ||
+        dish.title.length > MAX_TITLE_LENGTH ||
+        !Number.isFinite(Number(dish.price)),
+    );
+    if (hasInvalidDish) {
+      return NextResponse.json({ message: "Invalid dish payload." }, { status: 400 });
     }
 
     const answers: ChatAnswers = {

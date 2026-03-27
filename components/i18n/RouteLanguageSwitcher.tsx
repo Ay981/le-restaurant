@@ -11,7 +11,17 @@ type RouteLanguageSwitcherProps = {
   amharicLabel: string;
 };
 
-const standaloneRoutes = new Set(["/", "/about-us", "/contact-us", "/sign-in", "/create-account"]);
+const standaloneRoutes = new Set([
+  "/",
+  "/about-us",
+  "/contact-us",
+  "/sign-in",
+  "/create-account",
+  "/menu",
+  "/my-orders",
+  "/messages",
+  "/notifications",
+]);
 
 export default function RouteLanguageSwitcher({ locale, label, englishLabel, amharicLabel }: RouteLanguageSwitcherProps) {
   const pathname = usePathname();

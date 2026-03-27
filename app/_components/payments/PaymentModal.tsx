@@ -261,6 +261,9 @@ export default function PaymentModal({
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-[2px] md:py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label={isAmharic ? "የክፍያ ማረጋገጫ መስኮት" : "Payment confirmation dialog"}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           void handleCloseModal(true);
@@ -283,7 +286,7 @@ export default function PaymentModal({
               className="app-bg-accent h-10 w-10 rounded-xl text-xl leading-none text-white"
               aria-label={isAmharic ? "የክፍያ ሞዳልን ዝጋ" : "Close payment modal"}
             >
-              +
+              ×
             </button>
           </div>
 

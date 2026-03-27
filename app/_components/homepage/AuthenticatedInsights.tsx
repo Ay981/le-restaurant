@@ -74,7 +74,7 @@ export default function AuthenticatedInsights() {
 
         const { data, error } = await supabase
           .from("orders")
-          .select("order_number, created_at, order_items(dish_title_snapshot, quantity)")
+          .select("order_number, created_at, status, order_items(dish_title_snapshot, quantity)")
           .eq("customer_user_id", session.user.id)
           .order("created_at", { ascending: false })
           .limit(8);
