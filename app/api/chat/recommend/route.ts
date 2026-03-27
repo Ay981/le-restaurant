@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 
 type DishInput = {
   title: string;
@@ -55,9 +56,8 @@ const RETRYABLE_STATUS_CODES = new Set([429, 503]);
 const MAX_ATTEMPTS_PER_MODEL = 2;
 const MAX_DISHES_PER_REQUEST = 120;
 const MAX_TITLE_LENGTH = 140;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 20;
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.RECOMMEND_RATE_LIMIT_PER_MINUTE ?? "20");
 
 function sleep(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -360,26 +360,6 @@ async function requireAuthenticatedUser(request: Request) {
   return user?.id ?? null;
 }
 
-function consumeRateLimit(key: string) {
-  const now = Date.now();
-  const entry = rateLimitStore.get(key);
-  if (!entry || entry.resetAt <= now) {
-    rateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW_MS,
-    });
-    return { allowed: true };
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return { allowed: false, retryAfterMs: entry.resetAt - now };
-  }
-
-  entry.count += 1;
-  rateLimitStore.set(key, entry);
-  return { allowed: true };
-}
-
 export async function POST(request: Request) {
   try {
     const userId = await requireAuthenticatedUser(request);
@@ -390,11 +370,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const rate = consumeRateLimit(userId);
+    const rate = await consumeRateLimit({
+      key: `chat:recommend:${userId}`,
+      maxRequests: Number.isFinite(RATE_LIMIT_MAX_REQUESTS) && RATE_LIMIT_MAX_REQUESTS > 0 ? RATE_LIMIT_MAX_REQUESTS : 20,
+      windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+    });
     if (!rate.allowed) {
       return NextResponse.json(
         { message: "Rate limit exceeded. Please try again shortly." },
-        { status: 429, headers: { "Retry-After": String(Math.ceil((rate.retryAfterMs ?? 0) / 1000)) } },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
       );
     }
 

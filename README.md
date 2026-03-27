@@ -103,6 +103,7 @@ RECEIPT_VERIFY_API_KEY=...
 
 GEMINI_API_KEY=...
 GEMINI_MODEL=gemini-1.5-flash
+RECOMMEND_RATE_LIMIT_PER_MINUTE=20
 ```
 
 ## Database Setup (Supabase)
@@ -131,6 +132,7 @@ Current migration set:
 - [supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql](supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql)
 - [supabase/migrations/202603270200_order_admin_decision_note.sql](supabase/migrations/202603270200_order_admin_decision_note.sql)
 - [supabase/migrations/202603270300_security_policy_hardening.sql](supabase/migrations/202603270300_security_policy_hardening.sql)
+- [supabase/migrations/202603270400_api_rate_limit.sql](supabase/migrations/202603270400_api_rate_limit.sql)
 
 Main tables:
 

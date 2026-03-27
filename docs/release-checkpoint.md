@@ -20,6 +20,7 @@ Applied migration files (in order):
 12. `202603270100_receipt_review_and_staff_notifications.sql`
 13. `202603270200_order_admin_decision_note.sql`
 14. `202603270300_security_policy_hardening.sql`
+15. `202603270400_api_rate_limit.sql`
 
 Release-critical schema points:
 - Admin/staff order workflow tables and audit entries are active.
