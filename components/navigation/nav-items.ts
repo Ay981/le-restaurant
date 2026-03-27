@@ -15,8 +15,6 @@ export const navItems: NavItem[] = [
   { icon: CiHome, href: "/menu" },
   { icon: FiUserPlus, href: "/create-account" },
   { icon: FiLogIn, href: "/sign-in" },
-  { icon: CiDiscount1, href: "/discounts" },
-  { icon: GrAnalytics, href: "/analytics" },
   { icon: MdOutlineMessage, href: "/messages" },
   { icon: IoIosNotificationsOutline, href: "/notifications" },
   { icon: IoSettingsOutline, href: "/admin" },
