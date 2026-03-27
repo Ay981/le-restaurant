@@ -23,6 +23,7 @@ type DishRow = {
   price: number;
   image_url: string | null;
   availability_count: number;
+  is_active: boolean;
   categories:
     | {
         name: string;
@@ -82,8 +83,7 @@ async function getMenuData(locale: Locale) {
         supabase.from("categories").select("name, sort_order").order("sort_order", { ascending: true }),
         supabase
           .from("dishes")
-          .select("title, price, image_url, availability_count, categories(name)")
-          .eq("is_active", true)
+          .select("title, price, image_url, availability_count, is_active, categories(name)")
           .order("created_at", { ascending: true }),
       ]);
 
@@ -112,6 +112,7 @@ async function getMenuData(locale: Locale) {
             : `${dishRow.availability_count} Bowls available`,
         image: dishRow.image_url || "/image/pizza.png",
         categories: categoryName ? [translateCategory(categoryName, locale)] : [],
+        isActive: dishRow.is_active,
       };
     });
 
@@ -125,6 +126,7 @@ async function getMenuData(locale: Locale) {
               ...dish,
               availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
               categories: dish.categories.map((category) => translateCategory(category, locale)),
+              isActive: dish.isActive,
             })),
     };
   } catch {
@@ -134,6 +136,7 @@ async function getMenuData(locale: Locale) {
         ...dish,
         availability: locale === "am" ? dish.availability.replace("Bowls available", "ሳህኖች ይገኛሉ") : dish.availability,
         categories: dish.categories.map((category) => translateCategory(category, locale)),
+        isActive: dish.isActive,
       })),
     };
   }

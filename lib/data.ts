@@ -20,6 +20,7 @@ export type Dish = {
 	availability: string;
 	image: string;
 	categories: Category[];
+	isActive: boolean;
 };
 
 export type OrderItem = {
@@ -50,6 +51,7 @@ export const dishes: Dish[] = [
 		availability: "20 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Hot Dishes"],
+		isActive: true,
 
 	},
 	{
@@ -58,6 +60,7 @@ export const dishes: Dish[] = [
 		availability: "11 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Cold Dishes"],
+		isActive: true,
 	},
 	{
 		title: "Beef dumpling in hot and sour soup",
@@ -65,6 +68,7 @@ export const dishes: Dish[] = [
 		availability: "16 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Soup"],
+		isActive: true,
 	},
 	{
 		title: "Healthy noodle with spinach leaf",
@@ -72,6 +76,7 @@ export const dishes: Dish[] = [
 		availability: "22 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Hot Dishes"],
+		isActive: true,
 	},
 	{
 		title: "Hot spicy fried rice with omelette",
@@ -79,6 +84,7 @@ export const dishes: Dish[] = [
 		availability: "13 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Hot Dishes"],
+		isActive: true,
 	},
 	{
 		title: "Spicy instant noodle with special omelette",
@@ -86,6 +92,7 @@ export const dishes: Dish[] = [
 		availability: "17 Bowls available",
 		image: "/image/pizza.png",
 		categories: ["Hot Dishes"],
+		isActive: true,
 	},
 ];
 

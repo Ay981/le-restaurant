@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminAccess } from "@/lib/supabase/admin-route-auth";
+import { requireAdminOrStaffAccess } from "@/lib/supabase/admin-route-auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadDishImage } from "@/lib/supabase/dish-image-upload";
 import { getSafeDishImageUrl, validateDishTitle } from "@/lib/dishes/quality";
@@ -7,7 +7,7 @@ import { parseDishPayload, toNonNegativeInteger, toNonNegativeNumber } from "./_
 
 export async function POST(request: Request) {
   try {
-    const authResult = await requireAdminAccess(request);
+    const authResult = await requireAdminOrStaffAccess(request);
     if (!authResult.ok) {
       return NextResponse.json(
         {

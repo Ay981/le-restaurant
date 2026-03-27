@@ -24,6 +24,8 @@ type ProductsManagerPanelProps = {
   onCreateCategory: (event: React.FormEvent<HTMLFormElement>) => void;
   onOpenCreateModal: () => void;
   onOpenEditModal: (dish: EditableDish) => void;
+  onToggleDishActive: (dish: EditableDish) => void;
+  onRequestDeleteDish: (dish: EditableDish) => void;
 };
 
 export default function ProductsManagerPanel({
@@ -43,6 +45,8 @@ export default function ProductsManagerPanel({
   onCreateCategory,
   onOpenCreateModal,
   onOpenEditModal,
+  onToggleDishActive,
+  onRequestDeleteDish,
 }: ProductsManagerPanelProps) {
   const { locale } = useI18n();
   const isAmharic = locale === "am";
@@ -171,7 +175,7 @@ export default function ProductsManagerPanel({
         <button
           type="button"
           onClick={onOpenCreateModal}
-          className="app-bg-main relative flex min-h-61.25 flex-col rounded-3xl border border-dashed border-white/25 px-3 pb-3 pt-12 text-center sm:min-h-0 sm:rounded-2xl sm:px-4 sm:py-10"
+          className="app-bg-main relative flex min-h-61.25 flex-col items-center justify-center rounded-3xl border border-dashed border-white/25 px-3 pb-3 pt-12 text-center sm:min-h-0 sm:rounded-2xl sm:px-4 sm:py-10"
         >
           <span className="app-bg-elevated mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-white/15 text-3xl app-text-accent sm:hidden">
             +
@@ -183,7 +187,7 @@ export default function ProductsManagerPanel({
               {isAmharic ? "ጨምር" : "Add"}
             </span>
           </div>
-          <div className="hidden sm:block">
+          <div className="hidden sm:flex flex-col items-center justify-center">
             <p className="text-3xl leading-none app-text-accent">+</p>
             <p className="mt-3 text-sm font-semibold app-text-accent">{isAmharic ? "አዲስ ምግብ ጨምር" : "Add new dish"}</p>
           </div>
@@ -192,8 +196,15 @@ export default function ProductsManagerPanel({
         {dishes.map((dish) => (
           <article
             key={dish.id}
-            className="app-bg-main relative flex min-h-61.25 flex-col rounded-3xl border border-white/10 px-3 pb-3 pt-4 text-center sm:min-h-0 sm:rounded-2xl sm:p-4"
+            className={`app-bg-main relative flex min-h-61.25 flex-col rounded-3xl border px-3 pb-3 pt-4 text-center sm:min-h-0 sm:rounded-2xl sm:p-4 ${
+              dish.isActive ? "border-white/10" : "border-amber-300/40"
+            }`}
           >
+            {!dish.isActive ? (
+              <span className="absolute left-3 top-3 rounded-full border border-amber-200/30 bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100">
+                {isAmharic ? "ከስራ ውጪ" : "Out of order"}
+              </span>
+            ) : null}
             <div className="sm:hidden">
               <Image
                 src={getDishCardImageUrl(dish)}
@@ -228,13 +239,36 @@ export default function ProductsManagerPanel({
                 {formatCurrency(Number(dish.price || 0))} • {dish.availabilityCount || "0"} {isAmharic ? "ሳህኖች" : "Bowls"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => onOpenEditModal(dish)}
-              className="app-hover-accent-soft mt-auto w-full rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold app-text-accent sm:mt-4"
-            >
-              {isAmharic ? "ምግብ አርትዕ" : "Edit dish"}
-            </button>
+            <div className="mt-auto flex flex-col gap-2 sm:mt-4">
+              <button
+                type="button"
+                onClick={() => onOpenEditModal(dish)}
+                disabled={isSaving}
+                className="app-hover-accent-soft w-full rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold app-text-accent disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isAmharic ? "ምግብ አርትዕ" : "Edit dish"}
+              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleDishActive(dish)}
+                  disabled={isSaving}
+                  className="app-hover-accent-soft rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {dish.isActive ? (isAmharic ? "አቦዝን" : "Disable") : isAmharic ? "አንቃ" : "Activate"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onRequestDeleteDish(dish)}
+                  disabled={isSaving}
+                  className="rounded-lg border border-red-300/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isAmharic ? "ሰርዝ" : "Delete"}
+                </button>
+              </div>
+            </div>
           </article>
         ))}
       </div>

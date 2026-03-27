@@ -6,6 +6,7 @@ type DishRow = {
   price: number;
   image_url: string | null;
   availability_count: number;
+  is_active: boolean;
   categories:
     | {
         name: string;
@@ -29,8 +30,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from("dishes")
-      .select("title, price, image_url, availability_count, categories(name)")
-      .eq("is_active", true)
+      .select("title, price, image_url, availability_count, is_active, categories(name)")
       .ilike("title", `%${query}%`)
       .order("created_at", { ascending: true })
       .limit(60);
@@ -50,6 +50,7 @@ export async function GET(request: Request) {
         availability: `${dishRow.availability_count} Bowls available`,
         image: dishRow.image_url || "/image/pizza.png",
         categories: categoryName ? [categoryName] : [],
+        isActive: dishRow.is_active,
       };
     });
 

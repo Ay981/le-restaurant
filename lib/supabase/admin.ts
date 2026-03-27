@@ -3,12 +3,20 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabaseAdminEnv() {
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serverSupabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = publicSupabaseUrl ?? serverSupabaseUrl;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing Supabase admin env vars. Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.",
+      "Missing Supabase admin env vars. Set NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY.",
+    );
+  }
+
+  if (publicSupabaseUrl && serverSupabaseUrl && publicSupabaseUrl !== serverSupabaseUrl) {
+    throw new Error(
+      "Supabase URL mismatch: SUPABASE_URL and NEXT_PUBLIC_SUPABASE_URL must point to the same project.",
     );
   }
 

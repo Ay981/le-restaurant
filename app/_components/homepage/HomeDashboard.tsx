@@ -46,6 +46,10 @@ export default function HomeDashboard({
   }, [initialOrderSummary, orderItems]);
 
   const handleAddDish = (dish: Dish) => {
+    if (!dish.isActive) {
+      return;
+    }
+
     setOrderItems((previousItems) => {
       const existingItem = previousItems.find((item) => item.title === dish.title);
 

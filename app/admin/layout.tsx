@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         return;
       }
 
-      if (isStaff && pathname !== "/admin/orders" && pathname !== "/admin/messages") {
+      if (isStaff && pathname !== "/admin" && pathname !== "/admin/orders" && pathname !== "/admin/messages") {
         router.replace("/admin/orders");
         return;
       }

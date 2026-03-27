@@ -1,7 +1,7 @@
 "use client";
 
 import { ProductsManagerPanel } from "./_components/panels";
-import { CreateDishModal, EditDishModal } from "./_components/modals";
+import { ConfirmDeleteDishModal, CreateDishModal, EditDishModal } from "./_components/modals";
 import ProductsSkeleton from "./_components/skeletons/ProductsSkeleton";
 import { useAdminProductsManager } from "./_hooks/useAdminProductsManager";
 
@@ -31,6 +31,8 @@ export default function AdminPage() {
         onCreateCategory={manager.handleCreateCategory}
         onOpenCreateModal={() => manager.setIsCreateDishModalOpen(true)}
         onOpenEditModal={manager.openEditDishModal}
+        onToggleDishActive={manager.handleToggleDishActive}
+        onRequestDeleteDish={manager.openDeleteDishModal}
       />
 
       <CreateDishModal
@@ -63,6 +65,14 @@ export default function AdminPage() {
         onSubmit={manager.handleSaveEditDish}
         onDraftChange={(updater) => manager.setEditDishDraft((previous) => (previous ? updater(previous) : previous))}
         onImageFileChange={manager.handleEditImageFileChange}
+      />
+
+      <ConfirmDeleteDishModal
+        isOpen={manager.isDeleteDishModalOpen}
+        isSaving={manager.isSaving}
+        dishTitle={manager.deleteDishTarget?.title ?? null}
+        onClose={manager.closeDeleteDishModal}
+        onConfirm={manager.confirmDeleteDish}
       />
     </>
   );

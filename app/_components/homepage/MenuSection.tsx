@@ -173,7 +173,14 @@ export default function MenuSection({
             price={dish.price}
             availability={dish.availability}
             image={dish.image}
-            onClick={() => onAddDish(dish)}
+            isDisabled={!dish.isActive}
+            onClick={() => {
+              if (!dish.isActive) {
+                return;
+              }
+
+              onAddDish(dish);
+            }}
           />
         ))}
         {filteredDishes.length === 0 && (

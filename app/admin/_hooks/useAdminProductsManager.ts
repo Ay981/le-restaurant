@@ -28,7 +28,9 @@ export function useAdminProductsManager() {
 
   const [isCreateDishModalOpen, setIsCreateDishModalOpen] = useState(false);
   const [isEditDishModalOpen, setIsEditDishModalOpen] = useState(false);
+  const [isDeleteDishModalOpen, setIsDeleteDishModalOpen] = useState(false);
   const [editDishDraft, setEditDishDraft] = useState<EditableDish | null>(null);
+  const [deleteDishTarget, setDeleteDishTarget] = useState<EditableDish | null>(null);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newDishTitle, setNewDishTitle] = useState("");
@@ -297,6 +299,94 @@ export function useAdminProductsManager() {
     }
   };
 
+  const handleToggleDishActive = async (dish: EditableDish) => {
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const updatedDish = { ...dish, isActive: !dish.isActive };
+      const accessToken = await getAccessToken();
+
+      const response = await fetch(`/api/admin/dishes/${dish.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive: updatedDish.isActive }),
+      });
+
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message ?? "Failed to update dish status.");
+      }
+
+      setSuccessMessage(`${updatedDish.title} ${updatedDish.isActive ? "activated" : "disabled"}.`);
+      await loadAdminData();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to update dish status.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteDish = async (dish: EditableDish) => {
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const accessToken = await getAccessToken();
+
+      const response = await fetch(`/api/admin/dishes/${dish.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message ?? `Failed to delete ${dish.title}.`);
+      }
+
+      if (selectedDishId === dish.id) {
+        setSelectedDishId(null);
+      }
+
+      setDishes((previous) => previous.filter((item) => item.id !== dish.id));
+      setSuccessMessage(`Deleted: ${dish.title}`);
+      await loadAdminData();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to delete dish.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openDeleteDishModal = (dish: EditableDish) => {
+    setDeleteDishTarget(dish);
+    setIsDeleteDishModalOpen(true);
+  };
+
+  const closeDeleteDishModal = () => {
+    setIsDeleteDishModalOpen(false);
+    setDeleteDishTarget(null);
+  };
+
+  const confirmDeleteDish = async () => {
+    const targetDish = deleteDishTarget;
+    if (!targetDish) {
+      return;
+    }
+
+    setIsDeleteDishModalOpen(false);
+    setDeleteDishTarget(null);
+
+    await handleDeleteDish(targetDish);
+  };
+
   const openEditDishModal = (dish: EditableDish) => {
     setSelectedDishId(dish.id);
     setEditDishDraft({ ...dish });
@@ -364,7 +454,9 @@ export function useAdminProductsManager() {
 
     isCreateDishModalOpen,
     isEditDishModalOpen,
+    isDeleteDishModalOpen,
     editDishDraft,
+    deleteDishTarget,
 
     newDishTitle,
     newDishPrice,
@@ -381,7 +473,9 @@ export function useAdminProductsManager() {
     setActiveCategoryId,
 
     setIsCreateDishModalOpen,
+    setIsDeleteDishModalOpen,
     closeEditDishModal,
+    closeDeleteDishModal,
     setEditDishDraft,
 
     setNewDishTitle,
@@ -392,6 +486,9 @@ export function useAdminProductsManager() {
     handleCreateCategory,
     handleCreateDish,
     handleSaveEditDish,
+    handleToggleDishActive,
+    openDeleteDishModal,
+    confirmDeleteDish,
     openEditDishModal,
     handleCreateImageFileChange,
     handleEditImageFileChange,
