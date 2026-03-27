@@ -11,7 +11,7 @@ The homepage (`/`) displays the full restaurant menu organized by categories. Da
 **How it works:**
 
 1. The server component queries `categories` (sorted by `sort_order`) and active `dishes` from Supabase.
-2. If Supabase is unavailable, hardcoded fallback data from `lib/data.ts` is used.
+2. If dish retrieval fails, UI keeps categories but shows no fake/demo dish cards.
 3. Dishes are displayed as cards with title, price, availability count, and image.
 4. Category tabs allow filtering dishes by category.
 
@@ -143,18 +143,22 @@ The recommendation chatbot helps users discover dishes based on their preference
 
 ### User Interface
 
-The chatbot is embedded in the homepage as a collapsible panel (`RecommendationChat` component):
+The recommender is embedded in the menu flow as an in-page launcher + modal (`RecommendationChat` component):
 
-1. Click "Talk to Chatbot" to expand.
+1. Click "Open Recommender" to launch the modal.
 2. Answer preference questions:
    - **Favorite recipe** (free text)
-   - **Cuisine** (Any, Noodle, Pasta, Soup, Grill, Rice)
-   - **Spice level** (Mild, Medium, Spicy)
-   - **Budget** (Low, Medium, High)
-   - **Dietary** (No preference, Vegetarian, High-protein)
-   - **Meal type** (Light, Filling)
+       - **Cuisine** (Any, Noodle, Pasta, Soup, Grill, Rice, Mediterranean, Asian, Local)
+       - **Spice level** (Mild, Medium, Spicy, Very Spicy)
+       - **Budget** (Low, Medium, High, Premium)
+       - **Dietary** (No preference, Vegetarian, Vegan, High-protein, Low-carb)
+       - **Meal type** (Light, Filling, Balanced)
+       - **Occasion** (Casual, Business, Celebration, Quick bite)
+       - **Protein type** (Any, Chicken, Beef, Seafood, Egg, Plant-based)
+       - **Restrictions** (None, Gluten-free, Dairy-free, Nut-free)
 3. Click "Get recommendations" to generate suggestions.
 4. Results show up to 5 dishes with reasons and "Add to order" buttons.
+5. Signed-in users can use **For You** mode to preload fields from previous order history.
 
 ### Recommendation Engine
 
@@ -182,6 +186,9 @@ When Gemini is unavailable or fails:
   - Spice level alignment (+2-3)
   - Dietary compatibility (+3)
   - Meal type compatibility (+2)
+       - Occasion fit (+2)
+       - Protein preference match (+2)
+       - Restriction safety checks (+1)
   - Within budget (+2)
 - Returns top 5 dishes sorted by score (ties broken by price).
 
@@ -230,13 +237,18 @@ Admins can create new categories directly from the Products panel. Categories ha
 ### Order Management
 
 **View orders:**
-- Paginated list of all orders (excluding cancelled).
-- Search by order number, customer name, phone, or delivery address.
+- Sectioned operational board by status: Pending, Accepted, Delivered, Rejected.
+- Expanded view includes customer contact, delivery address, order items, payment details, receipt metadata, and uploaded receipt preview.
 
 **Update status:**
-- Orders follow a strict workflow: `pending` &rarr; `in_progress` &rarr; `delivered`.
+- Orders follow a strict workflow: `pending` &rarr; `in_progress` &rarr; `delivered`, with explicit reject path `pending` &rarr; `rejected`.
+- Rejection requires a reason; reason is persisted as `admin_decision_note` and shown to the customer.
 - Each status change is audited in `order_status_audit`.
 - Timestamps are automatically recorded for `started_at` and `delivered_at`.
+
+**Receipt review controls:**
+- Pending receipt reviews can be accepted or rejected directly in the order detail panel.
+- Once reviewed, action buttons are hidden and review status/note are shown as read-only.
 
 ---
 

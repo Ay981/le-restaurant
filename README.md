@@ -23,6 +23,8 @@ The app currently includes:
 - Supabase-backed categories, dishes, orders, and order items
 - Admin management UI with modal create/edit flows
 - Admin-only API routes for dish create/update
+- Admin order operations: accept, reject (with reason), mark delivered
+- Admin manual receipt review (accept/reject) with payment verification context
 - Receipt verification endpoint with replay protection
 - Customer personalization (previous orders + suggestions)
 - Guided chatbot recommendations with Gemini fallback
@@ -119,6 +121,15 @@ Current migration set:
 - [supabase/migrations/202603190200_payment_receipt_verifications.sql](supabase/migrations/202603190200_payment_receipt_verifications.sql)
 - [supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql](supabase/migrations/202603190300_auth_personalization_and_admin_policies.sql)
 - [supabase/migrations/202603190400_promote_admin_function.sql](supabase/migrations/202603190400_promote_admin_function.sql)
+- [supabase/migrations/202603220100_orders_workflow_and_staff.sql](supabase/migrations/202603220100_orders_workflow_and_staff.sql)
+- [supabase/migrations/202603220200_clear_payment_data.sql](supabase/migrations/202603220200_clear_payment_data.sql)
+- [supabase/migrations/202603220210_clear_payment_data_again.sql](supabase/migrations/202603220210_clear_payment_data_again.sql)
+- [supabase/migrations/202603220300_order_feedback_and_notifications.sql](supabase/migrations/202603220300_order_feedback_and_notifications.sql)
+- [supabase/migrations/202603230100_order_feedback_updated_at_trigger.sql](supabase/migrations/202603230100_order_feedback_updated_at_trigger.sql)
+- [supabase/migrations/202603230200_customer_messages.sql](supabase/migrations/202603230200_customer_messages.sql)
+- [supabase/migrations/202603230300_receipt_metadata_and_match_checks.sql](supabase/migrations/202603230300_receipt_metadata_and_match_checks.sql)
+- [supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql](supabase/migrations/202603270100_receipt_review_and_staff_notifications.sql)
+- [supabase/migrations/202603270200_order_admin_decision_note.sql](supabase/migrations/202603270200_order_admin_decision_note.sql)
 
 Main tables:
 
@@ -142,6 +153,9 @@ Admin promotion function is available in the migration above (`public.promote_us
 
 - [app/api/admin/dishes/route.ts](app/api/admin/dishes/route.ts): create dish (admin only)
 - [app/api/admin/dishes/[id]/route.ts](app/api/admin/dishes/[id]/route.ts): update dish (admin only)
+- [app/api/admin/orders/route.ts](app/api/admin/orders/route.ts): list active/recent orders for admin board
+- [app/api/admin/orders/[id]/status/route.ts](app/api/admin/orders/[id]/status/route.ts): status transitions (`pending -> in_progress -> delivered`, `pending -> rejected` with reason)
+- [app/api/admin/orders/[id]/receipt-review/route.ts](app/api/admin/orders/[id]/receipt-review/route.ts): manual receipt decision (`accepted`/`rejected`) and review notes
 
 Both endpoints support JSON and multipart payloads. Multipart requests can include `imageFile`, which uploads to Supabase Storage via [lib/supabase/dish-image-upload.ts](lib/supabase/dish-image-upload.ts).
 
@@ -171,10 +185,19 @@ API:
 
 Behavior:
 
-- asks guided preference questions (favorite recipe, cuisine, spice, budget, dietary, meal type),
+- asks guided preference questions (favorite recipe, cuisine, spice level, budget, dietary, meal type, occasion, protein type, restrictions),
 - returns up to 5 dish recommendations,
 - supports direct “Add to order” actions,
+- supports “For You” preference mode for authenticated users using previous order history,
 - uses Gemini when configured, and falls back to rule-based ranking if Gemini is unavailable.
+
+## Admin Order Workflow
+
+- Admin/staff review full order details (items, customer info, delivery address, payment summary, receipt metadata, and upload preview).
+- Receipt can be manually accepted/rejected when pending review.
+- Pending orders can be accepted or rejected (rejection requires a reason).
+- Accepted orders can be marked as delivered.
+- Rejection notes are persisted and shown to customers in `my-orders`.
 
 ## Images and Next.js Config
 
