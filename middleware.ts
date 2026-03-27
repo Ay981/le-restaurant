@@ -13,33 +13,39 @@ function detectLocale(request: NextRequest) {
 }
 
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = createSupabaseMiddlewareClient(request);
-  await supabase.auth.getUser();
+  try {
+    const { supabase, response } = createSupabaseMiddlewareClient(request);
+    await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-  const isStaticFile = /\.[^/]+$/.test(pathname);
+    const pathname = request.nextUrl.pathname;
+    const isStaticFile = /\.[^/]+$/.test(pathname);
 
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/favicon") ||
-    isStaticFile
-  ) {
+    if (
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/favicon") ||
+      isStaticFile
+    ) {
+      return response;
+    }
+
+    const existingLocale = request.cookies.get(localeCookieName)?.value;
+    if (existingLocale === "en" || existingLocale === "am") {
+      return response;
+    }
+
+    response.cookies.set(localeCookieName, detectLocale(request), {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+
     return response;
+  } catch (error) {
+    // Log error to Vercel logs for debugging
+    console.error("[middleware] Error:", error);
+    return NextResponse.next();
   }
-
-  const existingLocale = request.cookies.get(localeCookieName)?.value;
-  if (existingLocale === "en" || existingLocale === "am") {
-    return response;
-  }
-
-  response.cookies.set(localeCookieName, detectLocale(request), {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
-  });
-
-  return response;
 }
 
 export const config = {
