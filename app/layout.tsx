@@ -20,8 +20,42 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Restaurant",
-  description: "Restaurant dashboard for menu and order management",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  title: {
+    default: "My Restaurant",
+    template: "%s | My Restaurant",
+  },
+  description:
+    "Discover fresh dishes, get AI-powered recommendations, place orders online, upload payment receipts, and track every order live from kitchen to delivery.",
+  applicationName: "My Restaurant",
+  keywords: [
+    "restaurant",
+    "online food ordering",
+    "menu",
+    "AI dish recommendations",
+    "delivery tracking",
+    "restaurant dashboard",
+    "payment receipt verification",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "My Restaurant | Smart Ordering & Live Tracking",
+    description:
+      "Browse the menu, get personalized dish recommendations, place orders, verify payments, and track status updates in real time.",
+    url: "/",
+    siteName: "My Restaurant",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "My Restaurant | Smart Ordering & Live Tracking",
+    description:
+      "AI-powered food recommendations, seamless online ordering, payment verification, and live order tracking.",
+  },
+  category: "food",
 };
 
 export default async function RootLayout({
