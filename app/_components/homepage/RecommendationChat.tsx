@@ -468,8 +468,8 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
                     {source === "gemini"
                       ? "⚡ Gemini AI"
                       : isAmharic
-                        ? "⚙️ ተተኪ ስርዓት"
-                        : "⚙️ Smart Engine"}
+                        ? " ተተኪ ስርዓት"
+                        : " Smart Engine"}
                   </span>
                 ) : null}
               </div>
