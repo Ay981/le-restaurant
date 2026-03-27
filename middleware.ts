@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { localeCookieName } from "@/lib/i18n/config";
+import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
 
 function detectLocale(request: NextRequest) {
   const acceptLanguage = request.headers.get("accept-language")?.toLowerCase() ?? "";
@@ -11,7 +12,10 @@ function detectLocale(request: NextRequest) {
   return "en";
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const { supabase, response } = createSupabaseMiddlewareClient(request);
+  await supabase.auth.getUser();
+
   const pathname = request.nextUrl.pathname;
   const isStaticFile = /\.[^/]+$/.test(pathname);
 
@@ -21,15 +25,14 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     isStaticFile
   ) {
-    return NextResponse.next();
+    return response;
   }
 
   const existingLocale = request.cookies.get(localeCookieName)?.value;
   if (existingLocale === "en" || existingLocale === "am") {
-    return NextResponse.next();
+    return response;
   }
 
-  const response = NextResponse.next();
   response.cookies.set(localeCookieName, detectLocale(request), {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
