@@ -233,7 +233,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
 
   return (
     <>
-      <div className="mt-6 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-white/5 p-4 md:p-6">
+      <div className="mt-6 rounded-2xl border border-orange-500/30 bg-linear-to-r from-orange-500/10 to-white/5 p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold text-white">
@@ -265,7 +265,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
             }
           }}
         >
-          <div className="mx-auto h-full w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-gradient-to-br from-gray-950 to-gray-900 p-5 shadow-2xl md:p-6">
+          <div className="mx-auto h-full w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-linear-to-br from-gray-950 to-gray-900 p-5 shadow-2xl md:p-6">
             <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-5">
               <div>
                 <h2 className="text-2xl font-bold text-white">
@@ -438,7 +438,7 @@ export default function RecommendationChat({ dishes, onAddDish }: Recommendation
                   type="button"
                   onClick={generate}
                   disabled={isLoading}
-                  className="min-w-fit flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:from-orange-400 hover:to-orange-500 hover:shadow-orange-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="min-w-fit flex-1 rounded-xl bg-linear-to-r from-orange-500 to-orange-600 px-4 py-3 font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:from-orange-400 hover:to-orange-500 hover:shadow-orange-500/40 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isLoading
                     ? isAmharic
